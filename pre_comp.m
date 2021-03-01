@@ -1,6 +1,6 @@
 %Pre competition work
-%Linnea Evanson
-%10/02/21
+% Manfredi Castelli 
+% 01/03/2021
 clc;
 clear all;
 close all;
