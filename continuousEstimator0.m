@@ -1,4 +1,5 @@
-%%% Team Members: WRITE YOUR TEAM MEMBERS' NAMES HERE
+%%% Team Members: Joe Arrowsmith, Manfredi Castelli, Joonsu Gha, Jon
+%%% Skerlj, Linnea Evanson
 %%% BMI Spring 2015 (Update 17th March 2015)
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
