@@ -251,7 +251,7 @@ end
 %% 
 
 theta_radians = deg2rad(angles);
-[x, y] = pol2cart(theta_radians, 1);  
+[x, y] = pol2cart(angles, 1);  
 unit_vectors = [x;y];
 
 [r_max,s_a] = max(firing_rate,[],2);
@@ -270,11 +270,7 @@ end
 figure
 uu = 1;
  for neuron  = [42,6,44,22]
-        subplot(2,1,1);
-        [line,area] = stdshade(squeeze(all_rates(neuron,:,:))',0.2,colors(uu,:),angles); hold on;
-        xlabel('Angle (degree)');
-        ylabel('Discharge Rates (PPS)');
-        title('Tuning curve');
+        
         subplot(2,1,2)
         [line,area] = stdshade(fa_s(neuron,:),0.2,colors(uu,:),angles); hold on;
         h(uu) = line;
@@ -289,39 +285,11 @@ uu = 1;
     legend(f(:),lgd);
 %%
 figure;
-for angle = 1 : 8
-X = repmat(fa_s(:,angle),1,size(C_vec,1))';
+
+X = repmat(fa_s(:,1),1,size(C_vec,1))';
 V = X .* C_vec;
-subplot(3,3,angle);
-quiver(C_vec(1,:), C_vec(2,:), V(1,:),V(2,:),'k','Linewidth',1.2); hold on;
-pop_vector = sum(V,2)./abs(max(sum(V,2)));
-quiver(0, 0, pop_vector(1),pop_vector(2),'r','Linewidth',2);
-title(sprintf('Angle %i Deg',angles(angle)));
-grid on;
-end
-% [theta,rho] = cart2pol(V(1,:),V(2,:))
-%% Visualising Population Vector 
-figure;
-scale_factor = 5;
-for angle = 1 : 8
-X = repmat(fa_s(:,angle),1,size(C_vec,1))';
-V = X .* C_vec;
-[x_, y_] = pol2cart(theta_radians(angle), 1); 
+quiver(C_vec(1,:), C_vec(2,:), V(1,:),V(2,:));
 
-x_ = ones(1, size(C_vec,2)) .* scale_factor * x_;
-y_ = ones(1, size(C_vec,2)) .* scale_factor * y_;
+[theta,rho] = cart2pol(V(1,:),V(2,:))
+polarplot(theta,rho);
 
-quiver(x_, y_, V(1,:),V(2,:),'k','Linewidth',1,'ShowArrowHead','on'); hold on;
-pop_vector = sum(V,2)./15;
-% pop_vector = sum(V,2)./abs(max(sum(V,2)));
-quiver(x_(1), y_(1), pop_vector(1),pop_vector(2),'r','Linewidth',2);
-% title(sprintf('Angle %i Deg',angles(angle)));
-grid on;
-% polarplot(theta,rho);
-end
-
-title('Neural Population Vector','FontSize',14);
-%%
-[sorted,I] = sort(reshape(all_rates(1,:,:),[800,1]));
-y = repmat(fa_s(1,:),1,800/8)';
-features = [firing_rate(1,:)',fa_s(1,:)' ];
