@@ -218,8 +218,9 @@ for neuron  = 1: size(data.trial(1,1).spikes,1)
     end
 end
 
-%%
-
+%% Population Vector Analysis 
+% Get Firing rate of individual neruons 
+% avg across trials 
 angles = [30    70   110   150   190   230  ,   310   350].*(pi/180);
 angles = [30    70   110   150   190   230  ,   310   350];
 colors = [0 0.44 0.74; 0.8 0.2,0.2; .92 .69 .125; .2  .65 .2];
@@ -248,7 +249,7 @@ for ex = 1 : examples
     legend(f(:),lgd);
 end
 
-%% 
+%% Get TUning curve of each neuron based on its discharge rate as function of reaching angle
 
 theta_radians = deg2rad(angles);
 [x, y] = pol2cart(theta_radians, 1);  
@@ -266,7 +267,7 @@ for neuron = 1 : 98
 
 end
 
-%%
+%% Compare raw tuning curve and smoothed one with cos 
 figure
 uu = 1;
  for neuron  = [42,6,44,22]
@@ -287,7 +288,7 @@ uu = 1;
     ylabel('Tuning Response');
     title('Tuning curve');
     legend(f(:),lgd);
-%%
+%% Plot vector field 
 figure;
 for angle = 1 : 8
 X = repmat(fa_s(:,angle),1,size(C_vec,1))';
