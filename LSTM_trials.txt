@@ -1,0 +1,3 @@
+RMSE:
+
+0.6963  For 500 hidden units, 5 epochs, batch size 16.  11 minutes training time.
