@@ -1,6 +1,6 @@
 %Pre competition work
-%Linnea Evanson
-%10/02/21
+% Manfredi Castelli 
+% 01/03/2021
 clc;
 clear all;
 close all;
@@ -8,21 +8,14 @@ close all;
 data = load('monkeydata_training.mat');
 trials = data.trial;
 trial1 = trials(1,1).handPos;
-trial2 = trials(2,1).handPos;
+trial2 = trials(2,5).handPos;
 %%
 figure()
-plot(trial1(1,:))
+plot(trial1(1,:),trial1(2,:))
 hold on 
-plot(trial1(2,:))
-title("Trial 1")
-legend("X data", "Y data")
+plot(trial2(1,:),trial2(2,:))
 
-figure()
-plot(trial2(1,:))
-hold on 
-plot(trial2(2,:))
-title("Trial 2")
-legend("X data", "Y data")
+legend("Trial 1", "Trial 2")
 
 %% Raster plots
 %In a raster plot each row (y-axis) corresponds to the index of a neuron in
@@ -44,7 +37,7 @@ for neuron = 1:98
     end
 end
 figure()
-scatter(x,y,5,'filled'); % int indicates size of dots
+scatter(y,x,5,'filled'); % int indicates size of dots
 xlabel("Time (ms)")
 ylabel("Neuron Index")
 title("Raster Plot of Trial 1");
@@ -75,7 +68,7 @@ end
 
 figure()
 for trials = 1:8
-    scatter(x{1,trials}, y{1,trials},'MarkerFaceColor', colors(trials,:),'linewidth',1); %each trial is a different colour
+    scatter(x{1,trials}, y{1,trials},'linewidth',1); %each trial is a different colour
     hold on ;
 end
 xlabel("Time (ms)");
@@ -105,7 +98,7 @@ title("Raster Plot for Neuron 1");
 figure()
 fsamp = 1000;
 angle = 1;
-neuron = 5;
+neuron = 69;
 %Get times for all the trials, for Neuron one, for Task 1:
 for angle = 1:8
 spikes = [];
@@ -120,7 +113,7 @@ cst = [];
 for row = 1:100
     trial = data.trial(row,1).spikes;
     for timestep = 1:length(trial(1,:))
-        neur = trial(1,timestep);
+        neur = trial(neuron,timestep);
         if neur == 1
             spikes = [spikes;timestep];
         end
@@ -141,7 +134,7 @@ end
 smooth = filter(kernel,1,h.Values); %smooth these to plot a smooth function of firing rate of the neuron
 plot(middle, smooth, 'LineWidth',3);
 hold off;
-ylim([0,40]);
+% ylim([0,40]);
 xlabel("Time (msec)")
 ylabel("Distribution")
 
@@ -193,6 +186,7 @@ fsamp = 1000;
 angle = 1;
 neuron = 5;
 inst_rates = {};
+T = 200;
 %Get times for all the trials, for Neuron one, for Task 1:
 
 for neuron  = 1: size(data.trial(1,1).spikes,1)
@@ -200,12 +194,12 @@ for neuron  = 1: size(data.trial(1,1).spikes,1)
         spikes = [];
         for row = 1:100
             trial = data.trial(row,angle).spikes;
-            times = sum(trial(neuron,1:200));
-            dr = times ./ (size(trial,2)/fsamp) ;
+            times = sum(trial(neuron,1:T));
+            dr = times ./ (T/fsamp) ;
             spikes = [spikes,dr];
             
             
-            spike = find(trial(neuron,1:200)==1);
+            spike = find(trial(neuron,1:end)==1);
             pps = fsamp./diff(spike);
 %             inst_rates{neuron,angle,row} = trial(neuron,1:200) ; 
 %             inst_rates{neuron,angle,row,spike(2:end)}  = pps;
@@ -217,9 +211,21 @@ for neuron  = 1: size(data.trial(1,1).spikes,1)
 
     end
 end
-
 %%
+figure;
 
+neur = 44;
+lgd = {};
+for alpha = 1:8
+
+    histogram(all_rates(neur,alpha,:)); hold on;
+    xlabel('Firing rate (pps)','Fontsize',14);
+    lgd{alpha} = sprintf('Angle %i',angles(alpha));
+end
+legend(lgd);
+%% Population Vector Analysis 
+% Get Firing rate of individual neruons 
+% avg across trials 
 angles = [30    70   110   150   190   230  ,   310   350].*(pi/180);
 angles = [30    70   110   150   190   230  ,   310   350];
 colors = [0 0.44 0.74; 0.8 0.2,0.2; .92 .69 .125; .2  .65 .2];
@@ -248,10 +254,10 @@ for ex = 1 : examples
     legend(f(:),lgd);
 end
 
-%% 
+%% Get TUning curve of each neuron based on its discharge rate as function of reaching angle
 
 theta_radians = deg2rad(angles);
-[x, y] = pol2cart(angles, 1);  
+[x, y] = pol2cart(theta_radians, 1);  
 unit_vectors = [x;y];
 
 [r_max,s_a] = max(firing_rate,[],2);
@@ -261,16 +267,20 @@ for neuron = 1 : 98
     pref_dir = theta_radians(s_a(neuron));
     [x, y] = pol2cart(pref_dir, 1);  
     C_vec = [C_vec,[x;y]];
-    peak = preferred(neuron);
+%     peak = preferred(neuron);
     fa_s(neuron,:) = r_max(neuron) .* cos((theta_radians - pref_dir));
 
 end
 
-%%
+%% Compare raw tuning curve and smoothed one with cos 
 figure
 uu = 1;
  for neuron  = [42,6,44,22]
-        
+        subplot(2,1,1);
+        [line,area] = stdshade(squeeze(all_rates(neuron,:,:))',0.2,colors(uu,:),angles); hold on;
+        xlabel('Angle (degree)');
+        ylabel('Discharge Rates (PPS)');
+        title('Tuning curve');
         subplot(2,1,2)
         [line,area] = stdshade(fa_s(neuron,:),0.2,colors(uu,:),angles); hold on;
         h(uu) = line;
@@ -283,13 +293,159 @@ uu = 1;
     ylabel('Tuning Response');
     title('Tuning curve');
     legend(f(:),lgd);
+%% Plot vector field 
+figure;
+for angle = 1 : 8
+X = repmat(fa_s(:,angle),1,size(C_vec,1))';
+V = X .* C_vec;
+subplot(3,3,angle);
+quiver(C_vec(1,:), C_vec(2,:), V(1,:),V(2,:),'k','Linewidth',1.2); hold on;
+pop_vector = sum(V,2)./abs(max(sum(V,2)));
+quiver(0, 0, pop_vector(1),pop_vector(2),'r','Linewidth',2);
+title(sprintf('Angle %i Deg',angles(angle)));
+grid on;
+end
+% [theta,rho] = cart2pol(V(1,:),V(2,:))
+%% Visualising Population Vector 
+figure;
+scale_factor = 5;
+for angle = 1 : 8
+X = repmat(fa_s(:,angle),1,size(C_vec,1))';
+V = X .* C_vec;
+[x_, y_] = pol2cart(theta_radians(angle), 1); 
+
+x_ = ones(1, size(C_vec,2)) .* scale_factor * x_;
+y_ = ones(1, size(C_vec,2)) .* scale_factor * y_;
+
+quiver(x_, y_, V(1,:),V(2,:),'k','Linewidth',1,'ShowArrowHead','on'); hold on;
+pop_vector = sum(V,2)./13;
+% pop_vector = sum(V,2)./abs(max(sum(V,2)));
+quiver(x_(1), y_(1), pop_vector(1),pop_vector(2),'r','Linewidth',2);
+% title(sprintf('Angle %i Deg',angles(angle)));
+grid on;
+% polarplot(theta,rho);
+end
+
+title('Neural Population Vector','FontSize',14);
+
+%% Regression of tuning curves 
+
+models = [];
+for neuron = 1 : 98
+    y = firing_rate(neuron,:);
+    x = angles;
+    p = polyfit(x,y,3);
+    
+    models(neuron,:) = p;
+    x1 = 1:10:350;
+    y1 = polyval(p,x1);
+    
+    models_tuning(neuron,:) = y1; 
+end
+
+%% Test Model 
+% Select Trial and angle to test
+test_trial = 100;
+test_angle = 1;
+models_angle = x1;
+max_firing = max(firing_rate,[],2);
+min_firing = min(firing_rate,[],2);
+mean_firing = mean(firing_rate,2);
+show_plot = false;
+
+error_angle = zeros(8,100);
+for test_angle = 1: 8
+    for test_trial = 1:100
+features = all_rates(:,test_angle,test_trial);
+
+
+distance_treshold = 0.3;
+theta_pred = [];
+neuron_response = [];
+for neuron = 1:98
+%     approx_firing = interp1(features(neuron),features(neuron),models_tuning(neuron,:),'nearest');
+    [~,angle_predicted] = find((models_tuning(neuron,:) >= -distance_treshold+ features(neuron)) & (models_tuning(neuron,:) <= distance_treshold + features(neuron)));
+%     [~,angle_predicted] = find((models_tuning(neuron,:) == approx_firing));
+    if ~isnan(angle_predicted)
+       angle_discrete = nanmean(models_angle(angle_predicted));
+       magn = 1;
+    else
+        difference = abs(features(neuron) - models_tuning(neuron,:));
+        [diff_firing,I] = min(difference);
+        angle_discrete = models_angle(I);
+        magn = 0.6;
+        if diff_firing > 5
+            magn = 0;
+        end
+    end
+    [~,theta_idx] = min(abs(angles - angle_discrete));
+    theta_pred(neuron) = angles(theta_idx);
+    theta_pred_I(neuron) = theta_idx;
+    
+    [x, y] = pol2cart(angles(theta_idx)*(pi/180), 1);  
+    neuron_response = [neuron_response, [x;y]];
+    r_max = abs(features(neuron) - mean_firing(neuron));
+    pref_dir = theta_radians(s_a(neuron));
+    response = r_max .* cos((angle_discrete*(pi/180)) - pref_dir);
+    magnitude(neuron) = magn * response;
+  
+end
+
+
+
+    X = repmat(magnitude',1,size(neuron_response,1))';
+    V = X .* neuron_response;
+    pop_vector = 2 * sum(V,2)./sum(sum(V,2));
+    
+    if show_plot 
+    figure;
+    origin = zeros(1,size(V,2));
+    quiver(origin, origin, V(1,:),V(2,:),'k','Linewidth',1); hold on;
+    quiver(0, 0, pop_vector(1),pop_vector(2),'r','Linewidth',2);
+    hold on;
+    quiver(0, 0, 1 *unit_vectors(1,test_angle),1*unit_vectors(2,test_angle),'g','Linewidth',2);
+    grid on;
+    title(sprintf('Tested Trial % i - Angle %i Deg',test_trial,angles(test_angle)));
+    end
+    alpha = vectors_angle(pop_vector,unit_vectors(:,test_angle));
+
+    error_angle(test_angle,test_trial) = alpha;
+    end
+end
+
+[angles_mesh, trial_mesh ] = meshgrid(angles,1:100);
+%%
+figure; 
+surf(angles_mesh,trial_mesh,abs(error_angle)');
+xlabel('True Angle (deg)','Fontsize',14);
+ylabel('Trial','Fontsize',14)
+zlabel('Angle between true and estimated vector (deg)','Fontsize',14);
+
+figure; 
+stdshade(abs(error_angle)',0.2,colors(2,:),angles);
+xlabel('True Angle (deg)','Fontsize',14);
+ylabel('Angle between true and estimated vector (deg)','Fontsize',14);
+%%
+figure; 
+plot(models_angle,models_tuning(neuron,:),'Linewidth',2), hold on;
+yline(features(neuron),'r','Linewidth',2)
 %%
 figure;
+plot(angles,fa_s(neuron,:),'Linewidth',2), hold on;
+yline((features(neuron)-mean_firing(neuron)),'r','Linewidth',2)
 
-X = repmat(fa_s(:,1),1,size(C_vec,1))';
-V = X .* C_vec;
-quiver(C_vec(1,:), C_vec(2,:), V(1,:),V(2,:));
-
-[theta,rho] = cart2pol(V(1,:),V(2,:))
-polarplot(theta,rho);
-
+%% Construct NN data set 
+clc;
+data_set = [];
+label = [];
+norm_rates = normalize(all_rates,1,'range');
+max_factor = max(all_rates,[],'all');
+for n = 1:98
+    for angle = 1:8
+        
+        for trial = 1:100
+            data_set = [data_set; norm_rates(:,trial)',angle];
+            label = [label; angle];
+        end
+    end
+end

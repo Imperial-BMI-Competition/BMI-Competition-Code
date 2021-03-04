@@ -186,14 +186,16 @@ fsamp = 1000;
 angle = 1;
 neuron = 5;
 inst_rates = {};
-T = 200;
+
 %Get times for all the trials, for Neuron one, for Task 1:
 
 for neuron  = 1: size(data.trial(1,1).spikes,1)
     for angle = 1:size(data.trial,2)
         spikes = [];
         for row = 1:100
+            
             trial = data.trial(row,angle).spikes;
+            T = 200;
             times = sum(trial(neuron,1:T));
             dr = times ./ (T/fsamp) ;
             spikes = [spikes,dr];
@@ -214,14 +216,52 @@ end
 %%
 figure;
 angles = [30    70   110   150   190   230  ,   310   350];
-neur = 44;
+neur = 33;
 lgd = {};
 for alpha = 1:8
-
-    histogram(all_rates(neur,alpha,:)); hold on;
+    subplot(1,2,1)
+    histogram(squeeze(all_rates(neur,alpha,:))); hold on;
     xlabel('Firing rate (pps)','Fontsize',14);
+    
+    lgd{alpha} = sprintf('Angle %i',angles(alpha));
+    
+    subplot(1,2,2)
+    stem(angles,mean(squeeze(all_rates(neur,:,:)),2)); hold on;
+    
+    xlabel('Angle (deg)','Fontsize',14);
+end
+title(sprintf('Preferred direction %i',angles(s_a(neur))),'Fontsize',14);
+subplot(1,2,1);
+legend(lgd);
+
+subplot(1,2,2);
+legend({'Mean Firing','Peak Firing'});
+%%
+figure;
+neur = 1;
+lgd = {};
+avg = mean(squeeze(all_rates(neur,:,:)),2);
+error = std(squeeze(all_rates(neur,:,:)),[],2);
+confidence_all = [];
+x_values = 1:1:40;
+pdf_neurons = [];
+for neur = 1: 98
+for alpha = 1:8
+    [phat] = poissfit(squeeze(all_rates(neur,alpha,:)));
+    pd= fitdist(squeeze(all_rates(neur,alpha,:)),'Poisson');
+    distribution = pdf(pd,x_values);
+    pdf_neurons(neur,alpha,:) = distribution;
+    plot(x_values,distribution,'LineWidth',2); hold on;
+%     pd = makedist('poisson',phat);
+    confidence_all(neur,alpha,:) = cdf(pd,x_values);
+    
+    
+    
     lgd{alpha} = sprintf('Angle %i',angles(alpha));
 end
+end
+% plot(angles,confidence_all');
+xlabel('Firing rate (pps)','Fontsize',14);
 legend(lgd);
 %% Population Vector Analysis 
 % Get Firing rate of individual neruons 
@@ -363,9 +403,7 @@ distance_treshold = 0.3;
 theta_pred = [];
 neuron_response = [];
 for neuron = 1:98
-%     approx_firing = interp1(features(neuron),features(neuron),models_tuning(neuron,:),'nearest');
-    [~,angle_predicted] = find((models_tuning(neuron,:) >= -distance_treshold+ features(neuron)) & (models_tuning(neuron,:) <= distance_treshold + features(neuron)));
-%     [~,angle_predicted] = find((models_tuning(neuron,:) == approx_firing));
+    [~,nearest_cluster] = min(abs(firing_rate(neuron,:)-features(neuron))); % find cluster closest to current firing (multi modal distribution)
     if ~isnan(angle_predicted)
        angle_discrete = nanmean(models_angle(angle_predicted));
        magn = 1;
@@ -448,4 +486,15 @@ for n = 1:98
             label = [label; angle];
         end
     end
+end
+
+%% 
+n = 1;
+data_set = [];
+label = [];
+for angle = 1:8
+        
+    avg_  = mean(squeeze(all_rates(n,angle,:)));
+     data_set = [data_set; avg_,angle];
+    label = [label; angle];
 end
