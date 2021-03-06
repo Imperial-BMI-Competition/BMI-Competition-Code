@@ -92,91 +92,9 @@ ylabel("Action number");
 yticks(2.*[1:n_pc]);
 yticklabels(y_ticks);
 title("Raster Plot for Neuron 1");
-%% Peri-stimulus time histograms
-%Histogram of the times at which a neuron fires. One histogram per neural
-%unit.
-figure()
-fsamp = 1000;
-angle = 1;
-neuron = 69;
-%Get times for all the trials, for Neuron one, for Task 1:
-for angle = 1:8
-spikes = [];
-cst = [];
-% for row = 1:100
-%     trial = data.trial(row,angle).spikes;
-%     times = find(trial(neuron,:)== 1);
-%     dr = fsamp./(diff(times));
-%     spikes = [spikes,dr];
-% end
-
-for row = 1:100
-    trial = data.trial(row,1).spikes;
-    for timestep = 1:length(trial(1,:))
-        neur = trial(neuron,timestep);
-        if neur == 1
-            spikes = [spikes;timestep];
-        end
-    end
-end
-% cst = sum(spikes,1)./fsamp;
-windowWidth = 15; % Whatever you want.
-kernel = ones(1,windowWidth) / windowWidth;
 
 
-subplot(3,3,angle)
-h = histogram(spikes,100);
-hold on ;
-middle = [];
-for i = 1:h.NumBins
-    middle = [middle;(h.BinEdges(i) + h.BinEdges(i+1))/2  - windowWidth];
-end
-smooth = filter(kernel,1,h.Values); %smooth these to plot a smooth function of firing rate of the neuron
-plot(middle, smooth, 'LineWidth',3);
-hold off;
-% ylim([0,40]);
-xlabel("Time (msec)")
-ylabel("Distribution")
 
-title(sprintf("Peristimulus Time Histogram for Neuron %i, Angle %i", neuron,angle));
-
-end
-legend("Action Potential Histogram", "Moving Average Firing Rate")
-%% Frequency domain analysis 
-fsamp = 1000;
-uu = 1;
-for neuron  = 1: size(data.trial(1,1).spikes,1) - 1
-    for next_neur = neuron : size(data.trial(1,1).spikes,1)
-        for angle = 1
-    %         for angle = 1:size(data.trial,2)
-            density = [];
-            for row = 1
-                trial = data.trial(row,angle).spikes;
-                first = trial(neuron,:);
-                next = trial(next_neur,:);
-    %             [psd,F_psd] = pwelch(trial(neuron,:), hann(0.2*fsamp), [], [], fsamp , 'psd');
-                [psd,F_psd] = mscohere(normalize(first,'center'),normalize(next,'center'),...
-            hann(0.2*fsamp),[],[],fsamp) ;
-                density = [density; psd]; 
-            end
-
-            MSC_avg_trials(uu,:) = nanmean(density,2);
-            uu = uu + 1;
-    %         error_psd = nanstd(squeeze(all_psd(neuron,angle,:)),[],1);
-    end
-    end
-end
-
-%% %Visualize spectrum 
-cols = jet(size(data.trial,2));
-figure; 
-for i = 1: size(data.trial,2)
-    stdshade(squeeze(all_psd(:,i,:)),0.2,cols(i,:),F_psd); hold on;
-%     plot(F_psd,squeeze(MSC_avg_trials(i,1,:)),'color',cols(1,:)); hold on;
-end
-xlabel('Frequency (Hz)','FontSize', 14, 'Color', 'k')
-ylabel('PSD (AU)','FontSize', 14, 'Color', 'k')
-xlim([0,200]);
 %% TUning 
 %% Peri-stimulus time histograms
 %Histogram of the times at which a neuron fires. One histogram per neural
@@ -186,25 +104,28 @@ fsamp = 1000;
 angle = 1;
 neuron = 5;
 inst_rates = {};
-T = 200;
 %Get times for all the trials, for Neuron one, for Task 1:
 
 for neuron  = 1: size(data.trial(1,1).spikes,1)
     for angle = 1:size(data.trial,2)
         spikes = [];
+        spikes_ =  [];
         for row = 1:100
+            T = size(data.trial(row,angle).spikes,2);
             trial = data.trial(row,angle).spikes;
             times = sum(trial(neuron,1:T));
             dr = times ./ (T/fsamp) ;
             spikes = [spikes,dr];
             
-            
+            times_ = sum(trial(neuron,1:200));
+            dr_ = times_ ./ (200/fsamp) ;
+            spikes_ = [spikes_,dr];
             spike = find(trial(neuron,1:end)==1);
             pps = fsamp./diff(spike);
 %             inst_rates{neuron,angle,row} = trial(neuron,1:200) ; 
 %             inst_rates{neuron,angle,row,spike(2:end)}  = pps;
         end
-        
+        test_rates(neuron,angle,:) = spikes_; 
         all_rates(neuron,angle,:) = spikes; 
         firing_rate(neuron,angle) = nanmean(spikes,2);
         error = nanstd(spikes,[],1);
@@ -261,16 +182,40 @@ theta_radians = deg2rad(angles);
 unit_vectors = [x;y];
 
 [r_max,s_a] = max(firing_rate,[],2);
-r_max = abs(r_max - mean(firing_rate, 2)); % If spike much bigger than mean-> good tuning neuron-> bigger weight
-C_vec = [];
+directional_tuning = [];
+% r_max = (r_max - mean(firing_rate, 2)); % If spike much bigger than mean-> good tuning neuron-> bigger weight
+C_neur = [];
 for neuron = 1 : 98
     pref_dir = theta_radians(s_a(neuron));
     [x, y] = pol2cart(pref_dir, 1);  
-    C_vec = [C_vec,[x;y]];
+    C_neur = [C_neur,[x;y]];
 %     peak = preferred(neuron);
-    fa_s(neuron,:) = r_max(neuron) .* cos((theta_radians - pref_dir));
+    directional_tuning(neuron) = nanstd(firing_rate(neuron,:),[],2);
+
+    fa_s(neuron,:) = mean(firing_rate(neuron,:)) +  r_max(neuron) .* cos((theta_radians - pref_dir));
 
 end
+
+directional_threshold = 0.5;
+% directional_tuning(directional_tuning < directional_threshold) = [];
+
+n_dir_neurons = sum(directional_tuning < directional_threshold);
+fprintf('%i %% of neurons showed no directional tuning and were discarded.\n',round((n_dir_neurons/98) * 100));
+
+firing_rates_valid = firing_rate(directional_tuning > directional_threshold,:);
+
+[r_max,s_a_valid] = max(firing_rates_valid,[],2);
+
+figure; histogram(s_a);
+xlabel('Preferred Angle (ith angle)')
+ylabel('Count','Fontsize',14)
+xlabel('Preferred Angle (ith angle)','Fontsize',14);
+hold on;
+histogram(s_a_valid);
+legend('All Neurons','Directional Neurons Only');
+
+discard = true;
+
 
 %% Compare raw tuning curve and smoothed one with cos 
 figure
@@ -296,10 +241,10 @@ uu = 1;
 %% Plot vector field 
 figure;
 for angle = 1 : 8
-X = repmat(fa_s(:,angle),1,size(C_vec,1))';
-V = X .* C_vec;
+X = repmat(fa_s(:,angle),1,size(C_neur,1))';
+V = X .* C_neur;
 subplot(3,3,angle);
-quiver(C_vec(1,:), C_vec(2,:), V(1,:),V(2,:),'k','Linewidth',1.2); hold on;
+quiver(C_neur(1,:), C_neur(2,:), V(1,:),V(2,:),'k','Linewidth',1.2); hold on;
 pop_vector = sum(V,2)./abs(max(sum(V,2)));
 quiver(0, 0, pop_vector(1),pop_vector(2),'r','Linewidth',2);
 title(sprintf('Angle %i Deg',angles(angle)));
@@ -310,12 +255,12 @@ end
 figure;
 scale_factor = 5;
 for angle = 1 : 8
-X = repmat(fa_s(:,angle),1,size(C_vec,1))';
-V = X .* C_vec;
+X = repmat(fa_s(:,angle),1,size(C_neur,1))';
+V = X .* C_neur;
 [x_, y_] = pol2cart(theta_radians(angle), 1); 
 
-x_ = ones(1, size(C_vec,2)) .* scale_factor * x_;
-y_ = ones(1, size(C_vec,2)) .* scale_factor * y_;
+x_ = ones(1, size(C_neur,2)) .* scale_factor * x_;
+y_ = ones(1, size(C_neur,2)) .* scale_factor * y_;
 
 quiver(x_, y_, V(1,:),V(2,:),'k','Linewidth',1,'ShowArrowHead','on'); hold on;
 pop_vector = sum(V,2)./13;
@@ -347,55 +292,37 @@ end
 % Select Trial and angle to test
 test_trial = 100;
 test_angle = 1;
-models_angle = x1;
-max_firing = max(firing_rate,[],2);
-min_firing = min(firing_rate,[],2);
-mean_firing = mean(firing_rate,2);
-show_plot = false;
+
 
 error_angle = zeros(8,100);
-for test_angle = 1: 8
-    for test_trial = 1:100
-features = all_rates(:,test_angle,test_trial);
 
-
-distance_treshold = 0.3;
-theta_pred = [];
-neuron_response = [];
-for neuron = 1:98
-%     approx_firing = interp1(features(neuron),features(neuron),models_tuning(neuron,:),'nearest');
-    [~,angle_predicted] = find((models_tuning(neuron,:) >= -distance_treshold+ features(neuron)) & (models_tuning(neuron,:) <= distance_treshold + features(neuron)));
-%     [~,angle_predicted] = find((models_tuning(neuron,:) == approx_firing));
-    if ~isnan(angle_predicted)
-       angle_discrete = nanmean(models_angle(angle_predicted));
-       magn = 1;
-    else
-        difference = abs(features(neuron) - models_tuning(neuron,:));
-        [diff_firing,I] = min(difference);
-        angle_discrete = models_angle(I);
-        magn = 0.6;
-        if diff_firing > 5
-            magn = 0;
-        end
-    end
-    [~,theta_idx] = min(abs(angles - angle_discrete));
-    theta_pred(neuron) = angles(theta_idx);
-    theta_pred_I(neuron) = theta_idx;
-    
-    [x, y] = pol2cart(angles(theta_idx)*(pi/180), 1);  
-    neuron_response = [neuron_response, [x;y]];
-    r_max = abs(features(neuron) - mean_firing(neuron));
-    pref_dir = theta_radians(s_a(neuron));
-    response = r_max .* cos((angle_discrete*(pi/180)) - pref_dir);
-    magnitude(neuron) = magn * response;
-  
+if discard
+    test_rates(directional_tuning < directional_threshold,:,:) = [];
+    firing_rate(directional_tuning < directional_threshold,:) = [];
+    s_a(directional_tuning < directional_threshold) = [];
+    C_neur(:,directional_tuning < directional_threshold) = [];
+    fa_s(directional_tuning < directional_threshold,:) = [];
 end
 
-
-
-    X = repmat(magnitude',1,size(neuron_response,1))';
-    V = X .* neuron_response;
-    pop_vector = 2 * sum(V,2)./sum(sum(V,2));
+max_firing = max(firing_rate,[],2);
+min_firing = min(firing_rate,[],2);
+mean_firing = mean(fa_s,2);
+show_plot = false;
+%%
+tollerance = 1;
+for test_angle = 1: 8
+    for test_trial = 1:100
+        
+        features = test_rates(:,test_angle,test_trial) - mean_firing; % weight of each neuron
+        if tollerance
+            within = abs(test_rates(:,test_angle,test_trial) - mean_firing) < tollerance;
+            features(within) = abs(features(within));
+            
+        end
+        Weights = repmat(features,1,size(C_neur,1))';
+        N = Weights .* C_neur; % weighted individual directions 
+        
+        pop_vector = sum(N,2); % population vector
     
     if show_plot 
     figure;
@@ -403,36 +330,52 @@ end
     quiver(origin, origin, V(1,:),V(2,:),'k','Linewidth',1); hold on;
     quiver(0, 0, pop_vector(1),pop_vector(2),'r','Linewidth',2);
     hold on;
-    quiver(0, 0, 1 *unit_vectors(1,test_angle),1*unit_vectors(2,test_angle),'g','Linewidth',2);
+    quiver(0, 0, 20 *unit_vectors(1,test_angle),20*unit_vectors(2,test_angle),'g','Linewidth',2);
     grid on;
     title(sprintf('Tested Trial % i - Angle %i Deg',test_trial,angles(test_angle)));
     end
     alpha = vectors_angle(pop_vector,unit_vectors(:,test_angle));
 
+    error_angle(test_angle,test_trial) = 1 - (pop_vector(2)/pop_vector(1))/theta_radians(test_angle) ;
     error_angle(test_angle,test_trial) = alpha;
+%     error_angle(test_angle,test_trial) = (pop_vector(2)/pop_vector(1)) ;
+%     true_angle(test_angle,test_trial) = theta_radians(test_angle);
+%     error_angle(test_angle,test_trial) = 180/pi * abs((pop_vector(2)/pop_vector(1)) - theta_radians(test_angle) );
     end
 end
 
-[angles_mesh, trial_mesh ] = meshgrid(angles,1:100);
-%%
-figure; 
-surf(angles_mesh,trial_mesh,abs(error_angle)');
-xlabel('True Angle (deg)','Fontsize',14);
-ylabel('Trial','Fontsize',14)
-zlabel('Angle between true and estimated vector (deg)','Fontsize',14);
+% [angles_mesh, trial_mesh ] = meshgrid(angles,1:100);
+% 
+% figure; 
+% surf(angles_mesh,trial_mesh,abs(error_angle)');
+% xlabel('True Angle (deg)','Fontsize',14);
+% ylabel('Trial','Fontsize',14)
+% zlabel('Angle between true and estimated vector (deg)','Fontsize',14);
 
 figure; 
-stdshade(abs(error_angle)',0.2,colors(2,:),angles);
+stdshade(error_angle',0.2,colors(2,:),angles);
 xlabel('True Angle (deg)','Fontsize',14);
-ylabel('Angle between true and estimated vector (deg)','Fontsize',14);
+ylabel('Angle (deg)','Fontsize',14);
+title('Angle between True and Estimated direction','Fontsize',14);
+
+% for i = 1:8
+%   rmse(i) = sqrt(immse(true_angle(i,:),error_angle(i,:)));
+% end
+% figure; 
+% stdshade(rmse,0.2,colors(2,:),angles);
+% xlabel('True Angle (deg)','Fontsize',14);
+% ylabel('RMSE (deg)','Fontsize',14);
+% title(sprintf('Avg. Testing RMSE  between True and Estimated direction %1.2f',mean(rmse)),'Fontsize',14);
 %%
 figure; 
 plot(models_angle,models_tuning(neuron,:),'Linewidth',2), hold on;
 yline(features(neuron),'r','Linewidth',2)
 %%
+neuron = 84;
 figure;
-plot(angles,firing_rate(neuron,:),'Linewidth',2), hold on;
-yline((features(neuron)),'r','Linewidth',2)
+plot(angles,fa_s(neuron,:),'Linewidth',2), hold on;
+yline((test_rates(neuron,test_angle,test_trial) ),'r','Linewidth',2);
+yline(mean_firing(neuron),'k--','Linewidth',2)
 
 %% Construct NN data set 
 clc;
