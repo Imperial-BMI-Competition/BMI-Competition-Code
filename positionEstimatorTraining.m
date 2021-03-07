@@ -53,9 +53,10 @@ function [modelParameters] = positionEstimatorTraining(training_data)
   
   
     %Train LSTM Model For forecasting position:
+    decoder = angle_decoder_training(training_data);
     model_lstm = LSTM_training(training_data);
     
-    decoder = angle_decoder_training(data);
+    
     
     modelParameters.LSTM = model_lstm; 
     modelParameters.Pop_Vec = decoder; 
@@ -142,7 +143,7 @@ function [model_minibatch16_neural] = LSTM_training(trials)
     net = trainNetwork(XTrain,YTrain,layers,options);
 
     % Test Network:
-    net = predictAndUpdateState(net,XTrain, 'MiniBatchSize', 1);  %initialise network
+     net = predictAndUpdateState(net,XTrain, 'MiniBatchSize', 1);  %initialise network
 
     modelParameters.net = net;
     modelParameters.mu = train_mu;
@@ -159,28 +160,27 @@ function [decoder] = angle_decoder_training(data)
     angles = [30    70   110   150   190   230  ,   310   350];
 
     %Get the dishcarge rates of all  neurons, angles and tasks
-    for neuron  = 1: size(data.trial(1,1).spikes,1)
-        for angle = 1:size(data.trial,2)
+    for neuron  = 1: size(data(1,1).spikes,1)
+        for angle = 1:size(data,2)
             spikes = [];
-            spikes_ =  [];
-            for row = 1:100
-                T = size(data.trial(row,angle).spikes,2);
-                trial = data.trial(row,angle).spikes;
+            for row = 1:size(data,1)
+                T = size(data(row,angle).spikes,2);
+                trial = data(row,angle).spikes;
                 times = sum(trial(neuron,1:T));
                 dr = times ./ (T/fsamp) ;
                 spikes = [spikes,dr];
 
-                times_ = sum(trial(neuron,1:200));
-                dr_ = times_ ./ (200/fsamp) ;
-                spikes_ = [spikes_,dr];
-                spike = find(trial(neuron,1:end)==1);
-                pps = fsamp./diff(spike);
+%                 times_ = sum(trial(neuron,1:200));
+%                 dr_ = times_ ./ (200/fsamp) ;
+%                 spikes_ = [spikes_,dr];
+%                 spike = find(trial(neuron,1:end)==1);
+%                 pps = fsamp./diff(spike);
   
             end
-            test_rates(neuron,angle,:) = spikes_; 
+%             test_rates(neuron,angle,:) = spikes_; 
             all_rates(neuron,angle,:) = spikes; 
             firing_rate(neuron,angle) = nanmean(spikes,2);
-            error = nanstd(spikes,[],1);
+%             error = nanstd(spikes,[],1);
 
         end
     end
@@ -194,7 +194,7 @@ function [decoder] = angle_decoder_training(data)
     directional_tuning = [];
     % r_max = (r_max - mean(firing_rate, 2)); % If spike much bigger than mean-> good tuning neuron-> bigger weight
     C_neur = [];
-    for neuron = 1 : size(data.trial(1,1).spikes,1)
+    for neuron = 1 : size(data(1,1).spikes,1)
         pref_dir = theta_radians(s_a(neuron));
         [x, y] = pol2cart(pref_dir, 1);  
         C_neur = [C_neur,[x;y]];
@@ -208,7 +208,7 @@ function [decoder] = angle_decoder_training(data)
     % directional_tuning(directional_tuning < directional_threshold) = [];
 
     n_dir_neurons = sum(directional_tuning < directional_threshold);
-    fprintf('%i %% of neurons showed no directional tuning and were discarded.\n',round((n_dir_neurons/size(data.trial(1,1).spikes,1)) * 100));
+    fprintf('%i %% of neurons showed no directional tuning and were discarded.\n',round((n_dir_neurons/size(data(1,1).spikes,1)) * 100));
 
     discard = true;
     to_discard = directional_tuning < directional_threshold;
