@@ -1,6 +1,6 @@
-%Pre competition work
+% SVM Classificiation
 % Manfredi Castelli 
-% 01/03/2021
+% 06/03/2021
 clc;
 clear all;
 close all;
@@ -9,94 +9,10 @@ data = load('monkeydata_training.mat');
 trials = data.trial;
 trial1 = trials(1,1).handPos;
 trial2 = trials(2,5).handPos;
-%%
-figure()
-plot(trial1(1,:),trial1(2,:))
-hold on 
-plot(trial2(1,:),trial2(2,:))
-
-legend("Trial 1", "Trial 2")
-
-%% Raster plots
-%In a raster plot each row (y-axis) corresponds to the index of a neuron in
-%a neuron group. The columns (x-axis) corresponds to the current time in the simulation.
-%time should be in bins.
-
-colors = jet(size(data.trial,1));
-% For 1 trial
-trial1spikes = trials(1,1).spikes; %size 98x672
-
-x = [];
-y = [];
-for neuron = 1:98
-    for timesteps = 1:672
-        if trial1spikes(neuron,timesteps) == 1
-            x = [x;neuron];
-            y = [y;timesteps];
-        end
-    end
-end
-figure()
-scatter(y,x,5,'filled'); % int indicates size of dots
-xlabel("Time (ms)")
-ylabel("Neuron Index")
-title("Raster Plot of Trial 1");
-
-%Raster plot for one neural unit over many trials
-%different colour for each 8 trials
-x = {};
-y = {};
-for trials = 1:8
-    x_temp = [];
-    y_temp = [];
-    for movements = 1:8
-        trial = data.trial(trials,movements);
-        disp("number of timesteps:");
-        disp(length(trial.spikes(1,:)));
-        for timesteps = 1:length(trial.spikes(1,:))
-            if trial.spikes(1,timesteps) == 1
-                x_temp = [x_temp;timesteps];
-                y_temp = [y_temp;movements];
-            end
-        end
-        disp(x_temp);
-    x{trials} = x_temp;
-    y{trials} = y_temp;
-    end
-end
-
-
-figure()
-for trials = 1:8
-    scatter(x{1,trials}, y{1,trials},'linewidth',1); %each trial is a different colour
-    hold on ;
-end
-xlabel("Time (ms)");
-ylabel("Action number");
-ylim([0,8]);
-legend("Trial 1", "Trial 2", "Trial 3", "Trial 4", "Trial 5", "Trial 6", "Trial 7", "Trial 8");
-title("Raster Plot for Neuron 1");
-%% PCA
-
-figure()
-n_pc = 8;
-y_ticks = {};
-cols = jet(n_pc);
-for PC = 1:n_pc
-plot(score(:,PC),PC*2,'o','color',cols(PC,:),'linewidth',1); %each trial is a different colour
-y_ticks{PC} = sprintf('PC %i',PC);
-hold on
-end
-xlabel("Time (ms)");
-ylabel("Action number");
-yticks(2.*[1:n_pc]);
-yticklabels(y_ticks);
-title("Raster Plot for Neuron 1");
 
 
 
-%% TUning 
-%% Peri-stimulus time histograms
+%% Tuning FUncitons for labelling neurons 
 %Histogram of the times at which a neuron fires. One histogram per neural
 %unit.
 
@@ -111,7 +27,8 @@ for neuron  = 1: size(data.trial(1,1).spikes,1)
         spikes = [];
         spikes_ =  [];
         for row = 1:100
-            T = size(data.trial(row,angle).spikes,2);
+%             T = size(data.trial(row,angle).spikes,2);
+             T = size(data.trial(row,angle).spikes,2);
             trial = data.trial(row,angle).spikes;
             times = sum(trial(neuron,1:T));
             dr = times ./ (T/fsamp) ;
@@ -122,7 +39,9 @@ for neuron  = 1: size(data.trial(1,1).spikes,1)
             spikes_ = [spikes_,dr];
             spike = find(trial(neuron,1:end)==1);
             pps = fsamp./diff(spike);
-%             inst_rates{neuron,angle,row} = trial(neuron,1:200) ; 
+             
+            n_spikes(neuron,angle,row) = times;
+            n_spikes_test(neuron,angle,row) = times_;
 %             inst_rates{neuron,angle,row,spike(2:end)}  = pps;
         end
         test_rates(neuron,angle,:) = spikes_; 
@@ -136,14 +55,14 @@ end
 figure;
 angles = [30    70   110   150   190   230  ,   310   350];
 neur = 44;
-lgd = {};
-for alpha = 1:8
-
-    histogram(all_rates(neur,alpha,:)); hold on;
-    xlabel('Firing rate (pps)','Fontsize',14);
-    lgd{alpha} = sprintf('Angle %i',angles(alpha));
-end
-legend(lgd);
+% lgd = {};
+% for alpha = 1:8
+% 
+%     histogram(all_rates(neur,alpha,:)); hold on;
+%     xlabel('Firing rate (pps)','Fontsize',14);
+%     lgd{alpha} = sprintf('Angle %i',angles(alpha));
+% end
+% legend(lgd);
 %% Population Vector Analysis 
 % Get Firing rate of individual neruons 
 % avg across trials 
@@ -206,13 +125,13 @@ firing_rates_valid = firing_rate(directional_tuning > directional_threshold,:);
 
 [r_max,s_a_valid] = max(firing_rates_valid,[],2);
 
-figure; histogram(s_a);
-xlabel('Preferred Angle (ith angle)')
-ylabel('Count','Fontsize',14)
-xlabel('Preferred Angle (ith angle)','Fontsize',14);
-hold on;
-histogram(s_a_valid);
-legend('All Neurons','Directional Neurons Only');
+% figure; histogram(s_a);
+% xlabel('Preferred Angle (ith angle)')
+% ylabel('Count','Fontsize',14)
+% xlabel('Preferred Angle (ith angle)','Fontsize',14);
+% hold on;
+% histogram(s_a_valid);
+% legend('All Neurons','Directional Neurons Only');
 
 discard = true;
 
@@ -238,55 +157,9 @@ uu = 1;
     ylabel('Tuning Response');
     title('Tuning curve');
     legend(f(:),lgd);
-%% Plot vector field 
-figure;
-for angle = 1 : 8
-X = repmat(fa_s(:,angle),1,size(C_neur,1))';
-V = X .* C_neur;
-subplot(3,3,angle);
-quiver(C_neur(1,:), C_neur(2,:), V(1,:),V(2,:),'k','Linewidth',1.2); hold on;
-pop_vector = sum(V,2)./abs(max(sum(V,2)));
-quiver(0, 0, pop_vector(1),pop_vector(2),'r','Linewidth',2);
-title(sprintf('Angle %i Deg',angles(angle)));
-grid on;
-end
-% [theta,rho] = cart2pol(V(1,:),V(2,:))
-%% Visualising Population Vector 
-figure;
-scale_factor = 5;
-for angle = 1 : 8
-X = repmat(fa_s(:,angle),1,size(C_neur,1))';
-V = X .* C_neur;
-[x_, y_] = pol2cart(theta_radians(angle), 1); 
 
-x_ = ones(1, size(C_neur,2)) .* scale_factor * x_;
-y_ = ones(1, size(C_neur,2)) .* scale_factor * y_;
 
-quiver(x_, y_, V(1,:),V(2,:),'k','Linewidth',1,'ShowArrowHead','on'); hold on;
-pop_vector = sum(V,2)./13;
-% pop_vector = sum(V,2)./abs(max(sum(V,2)));
-quiver(x_(1), y_(1), pop_vector(1),pop_vector(2),'r','Linewidth',2);
-% title(sprintf('Angle %i Deg',angles(angle)));
-grid on;
-% polarplot(theta,rho);
-end
 
-title('Neural Population Vector','FontSize',14);
-
-%% Regression of tuning curves 
-
-models = [];
-for neuron = 1 : 98
-    y = firing_rate(neuron,:);
-    x = angles;
-    p = polyfit(x,y,3);
-    
-    models(neuron,:) = p;
-    x1 = 10:5:350;
-    y1 = polyval(p,x1);
-    
-    models_tuning(neuron,:) = y1; 
-end
 
 %% Test Model 
 % Select Trial and angle to test
@@ -300,14 +173,54 @@ if discard
     test_rates(directional_tuning < directional_threshold,:,:) = [];
     firing_rate(directional_tuning < directional_threshold,:) = [];
     s_a(directional_tuning < directional_threshold) = [];
-    C_neur(:,directional_tuning < directional_threshold) = [];
+%     C_neur(:,directional_tuning < directional_threshold) = [];
     fa_s(directional_tuning < directional_threshold,:) = [];
+    n_spikes(directional_tuning < directional_threshold,:,:) = [];
+    n_spikes_test(directional_tuning < directional_threshold,:,:) = [];
 end
 
 max_firing = max(firing_rate,[],2);
 min_firing = min(firing_rate,[],2);
 mean_firing = mean(fa_s,2);
 show_plot = false;
+
+%% Build Features Vector
+F = [];
+y_true = [];
+
+F_test = [];
+y_true_test = [];
+
+for i = 1: 8
+    for j = 1: 100
+        total_n_spikes = sum(n_spikes(:,i,j));
+        total_n_spikes_test = sum(n_spikes_test(:,i,j));
+        
+        f = []; f_test =  []; 
+        for angle = 1:8
+            f(angle) = sum(n_spikes(s_a == angle,i,j));
+            f_test(angle) =  sum(n_spikes_test(s_a == angle,i,j));
+        end
+        
+        % Training 
+        f = f./total_n_spikes;
+        F = [F;f]; 
+        y_true = [y_true; i];
+        
+        % Testing - 200 msec only
+        f_test = f_test./total_n_spikes_test;
+        F_test = [F_test;f_test]; 
+        y_true_test = [y_true_test; i];
+    end
+end
+F_all = [[F, y_true];[F_test,y_true_test]];
+[angle_classifier, validationAccuracy] = trainClassifier(F_all);
+
+%% Testing on 200 msec data
+ypred = angle_classifier.predictFcn(F_test);
+
+cm = confusionchart(y_true_test,ypred)
+title(sprintf('Accuracy %2.1f %%- MSE %2.2f',100 * sum(y_true_test == ypred)/size(ypred,1),immse(y_true_test,ypred)));
 %%
 tollerance = 1;
 for test_angle = 1: 8
@@ -377,18 +290,3 @@ plot(angles,fa_s(neuron,:),'Linewidth',2), hold on;
 yline((test_rates(neuron,test_angle,test_trial) ),'r','Linewidth',2);
 yline(mean_firing(neuron),'k--','Linewidth',2)
 
-%% Construct NN data set 
-clc;
-data_set = [];
-label = [];
-norm_rates = normalize(all_rates,1,'range');
-max_factor = max(all_rates,[],'all');
-for n = 1:98
-    for angle = 1:8
-        
-        for trial = 1:100
-            data_set = [data_set; norm_rates(:,trial)',angle];
-            label = [label; angle];
-        end
-    end
-end
