@@ -57,8 +57,8 @@ function [modelParameters] = positionEstimatorTraining(training_data)
     
     decoder = angle_decoder_training(data);
     
-    modelParameters{1,1} = model_lstm; 
-    modelParameters{1,2} = decoder; 
+    modelParameters.LSTM = model_lstm; 
+    modelParameters.Pop_Vec = decoder; 
     
 
 end
@@ -66,34 +66,43 @@ end
 
 
 function [model_minibatch16_neural] = LSTM_training(trials)
-
-    size_t = length(trials); %number of trials
-    dataTrain = cell(1,size_t*8); %needs to be in cell array for subsequent code
+    
+    angles = [30 70 110 150 190 230 310 350];
+    
+    [x_angles, y_angles] = pol2cart(angles.*(pi/180), 1);  
+    n_trials = length(trials); %number of trials
+    dataTrain = {}; %needs to be in cell array for subsequent code
 
 
     count = 1;
-    for i = 1:size_t %number of trials
-        for j = 1:8     %number of types of directions (experiments)
+    for i = 1:n_trials %number of trials
+        for j = 1:length(angles)     %number of types of directions (experiments)
             N = trials(i,j).handPos(1:2,:); %select only x and y, not z
-            S = trials(i,j).spikes;
-            dataTrain{count} = [N;S]; % make one long row vector with features of position and spikes
-            count = count+1;
+            for T = 1 : size(N,2)
+                dataTrain{count} = [N(:,T); x_angles(j); y_angles(j)]; % make one long row vector with features of position
+                count = count + 1;
+            end
         end
     end
 
     %Standardise all the features by mean of that feature across all trials
     dataTrain2 = cell2mat(dataTrain);  %to calculate mean and standard deviation of each feature to normalise
-    train_mu = mean(dataTrain2,2);
-    train_sig = std(dataTrain2,0,2); %0 weights, dimension 2 (rows)
+    train_mu = mean(dataTrain2, 2);
+    train_sig = std(dataTrain2, [], 2); 
 
-    dataTrain_standardisedX = cell(1,size_t*8);
-    dataTrain_standardisedY = cell(1,size_t*8);
-
-    for i = 1:size_t*8
-        trial = dataTrain{i};
+    dataTrain_standardisedX = {};
+    dataTrain_standardisedY = {};
+    
+   
+    for uu = 1:size(dataTrain,2) - 20
+        trial = dataTrain{uu};
         trial = (trial - train_mu) ./ train_sig;
-        dataTrain_standardisedX{i} = trial(:,1:end-1);
-        dataTrain_standardisedY{i} = trial(:,2:end);
+        
+        trial_next = (dataTrain{uu+20} - train_mu) ./ train_sig;
+        
+        dataTrain_standardisedX{uu} = trial;
+        dataTrain_standardisedY{uu} = trial_next(1:2);
+
     end
 
     XTrain = dataTrain_standardisedX;  %to predict use all data but end time step
@@ -202,23 +211,19 @@ function [decoder] = angle_decoder_training(data)
     fprintf('%i %% of neurons showed no directional tuning and were discarded.\n',round((n_dir_neurons/size(data.trial(1,1).spikes,1)) * 100));
 
     discard = true;
-    non_directional = directional_tuning < directional_threshold;
+    to_discard = directional_tuning < directional_threshold;
     
     % If wish not to discard non-directional neurons
     if ~discard
-        non_directional = ones(size(r_max));
+        to_discard = ones(size(r_max));
     end
     
     
     decoder = {};
     
     % Format Output
-    decoder{1,1} = 'Tuning_Curve';
-    decoder{2,1} = 'Preferred_angle';
-    decoder{3,1} = 'Non_direction_neurons';
-    
-    decoder{1,2} = fa_s;
-    decoder{2,2} = C_neur;
-    decoder{3,2} = non_directional;
+    decoder.tuning_curve = fa_s;
+    decoder.preferred_angle = C_neur;
+    decoder.non_directional =  to_discard;
        
 end
