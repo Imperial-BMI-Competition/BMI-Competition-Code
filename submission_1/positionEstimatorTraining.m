@@ -253,6 +253,4 @@ function [velocity] = average_velocities(training_data)
         end
         velocity(i).average = mean(Grouped_coord,3);
     end
-    
-    
 end
