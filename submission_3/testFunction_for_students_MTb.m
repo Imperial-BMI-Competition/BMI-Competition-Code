@@ -1,24 +1,22 @@
-%% Test Script to give to the students, March 2015
-%% Continuous Position Estimator Test Script
+% Test Script to give to the students, March 2015
+% Continuous Position Estimator Test Script
 % This function first calls the function "positionEstimatorTraining" to get
 % the relevant modelParameters, and then calls the function
 % "positionEstimator" to decode the trajectory. 
-%clc;
-%testFunction_for_students_MTb('');
+
 function RMSE = testFunction_for_students_MTb(teamName)
 
-load monkeydata_training.mat
+load ../monkeydata0.mat
 
 % Set random number generator
 rng(2013);
 ix = randperm(length(trial));
 
-%addpath(teamName);
+% addpath(teamName);
 
 % Select training and testing data (you can choose to split your data in a different way if you wish)
-trainingData = trial(ix(1:80),:);
-testData = trial(ix(81:end),:);
-
+trainingData = trial(ix(1:50),:);
+testData = trial(ix(51:end),:);
 
 fprintf('Testing the continuous position estimator...')
 
@@ -32,7 +30,6 @@ grid
 
 % Train Model
 modelParameters = positionEstimatorTraining(trainingData);
-%load model_minibatch16_neural.mat
 
 for tr=1:size(testData,1)
     display(['Decoding block ',num2str(tr),' out of ',num2str(size(testData,1))]);
@@ -40,8 +37,9 @@ for tr=1:size(testData,1)
     for direc=randperm(8) 
         decodedHandPos = [];
 
-        times=320:20:size(testData(tr,direc).spikes,2); 
-        for t = times
+        times=320:20:size(testData(tr,direc).spikes,2);
+        
+        for t=times
             past_current_trial.trialId = testData(tr,direc).trialId;
             past_current_trial.spikes = testData(tr,direc).spikes(:,1:t); 
             past_current_trial.decodedHandPos = decodedHandPos;
@@ -61,7 +59,6 @@ for tr=1:size(testData,1)
             meanSqError = meanSqError + norm(testData(tr,direc).handPos(1:2,t) - decodedPos)^2;
             
         end
-        
         n_predictions = n_predictions+length(times);
         hold on
         plot(decodedHandPos(1,:),decodedHandPos(2,:), 'r');
@@ -73,6 +70,6 @@ legend('Decoded Position', 'Actual Position')
 
 RMSE = sqrt(meanSqError/n_predictions) 
 
-%rmpath(genpath(teamName))
+rmpath(genpath(teamName))
 
 end
