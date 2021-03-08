@@ -6,7 +6,7 @@
 
 function RMSE = testFunction_for_students_MTb(teamName)
 
-load monkeydata0.mat
+load ../monkeydata0.mat
 
 % Set random number generator
 rng(2013);

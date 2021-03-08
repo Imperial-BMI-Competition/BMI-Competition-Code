@@ -1,5 +1,5 @@
-%% Test Script to give to the students, March 2015
-%% Continuous Position Estimator Test Script
+% Test Script to give to the students, March 2015
+% Continuous Position Estimator Test Script
 % This function first calls the function "positionEstimatorTraining" to get
 % the relevant modelParameters, and then calls the function
 % "positionEstimator" to decode the trajectory. 
@@ -7,7 +7,7 @@
 %testFunction_for_students_MTb('');
 function RMSE = testFunction_for_students_MTb(teamName)
 
-load monkeydata_training.mat
+load ../monkeydata0.mat
 
 % Set random number generator
 rng(2013);
