@@ -28,14 +28,14 @@ for neuron  = 1: size(data.trial(1,1).spikes,1)
         spikes_ =  [];
         for row = 1:100
 %             T = size(data.trial(row,angle).spikes,2);
-             T = size(data.trial(row,angle).spikes,2);
+            T = size(data.trial(row,angle).spikes,2);
             trial = data.trial(row,angle).spikes;
             times = sum(trial(neuron,1:T));
             dr = times ./ (T/fsamp) ;
             spikes = [spikes,dr];
             
-            times_ = sum(trial(neuron,1:200));
-            dr_ = times_ ./ (200/fsamp) ;
+            times_ = sum(trial(neuron,1:320));
+            dr_ = times_ ./ (320/fsamp) ;
             spikes_ = [spikes_,dr];
             spike = find(trial(neuron,1:end)==1);
             pps = fsamp./diff(spike);
@@ -185,8 +185,8 @@ mean_firing = mean(fa_s,2);
 show_plot = false;
 
 %% Build Features Vector
-F = [];
-y_true = [];
+F = []; F_ = [];
+y_true = []; y_true_ = [];
 
 F_test = [];
 y_true_test = [];
@@ -196,7 +196,7 @@ for i = 1: 8
         total_n_spikes = sum(n_spikes(:,i,j));
         total_n_spikes_test = sum(n_spikes_test(:,i,j));
         
-        f = []; f_test =  []; 
+        f = []; f_test =  [];
         for angle = 1:8
             f(angle) = sum(n_spikes(s_a == angle,i,j));
             f_test(angle) =  sum(n_spikes_test(s_a == angle,i,j));
@@ -211,16 +211,30 @@ for i = 1: 8
         f_test = f_test./total_n_spikes_test;
         F_test = [F_test;f_test]; 
         y_true_test = [y_true_test; i];
+        
+%         % Final Testing - 200 msec only
+%         f_test = f_test./total_n_spikes_test;
+%         F_test = [F_test;f_test]; 
+%         y_true_test = [y_true_test; i];
     end
 end
-F_all = [[F, y_true];[F_test,y_true_test]];
+%%
+cv = cvpartition(size(F_test,1),'HoldOut',0.3);
+idx = cv.test;
+
+testing_elem = randperm(800,500);
+F_all = [[F, y_true];[F_test(idx,:),y_true_test(idx,:)]];
 [angle_classifier, validationAccuracy] = trainClassifier(F_all);
 
-%% Testing on 200 msec data
-ypred = angle_classifier.predictFcn(F_test);
 
-cm = confusionchart(y_true_test,ypred)
-title(sprintf('Accuracy %2.1f %%- MSE %2.2f',100 * sum(y_true_test == ypred)/size(ypred,1),immse(y_true_test,ypred)));
+
+
+% Testing on 200 msec data
+
+ypred = angle_classifier.predictFcn(F_test(~idx,:));
+figure;
+cm = confusionchart(y_true_test(~idx,:),ypred)
+title(sprintf('QDA PCA - Accuracy %2.1f %%- MSE %2.2f',100 * sum(y_true_test(~idx,:) == ypred)/size(ypred,1),immse(y_true_test(~idx,:),ypred)));
 %%
 tollerance = 1;
 for test_angle = 1: 8

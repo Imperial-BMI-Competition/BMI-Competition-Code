@@ -117,8 +117,8 @@ for neuron  = 1: size(data.trial(1,1).spikes,1)
             dr = times ./ (T/fsamp) ;
             spikes = [spikes,dr];
             
-            times_ = sum(trial(neuron,1:200));
-            dr_ = times_ ./ (200/fsamp) ;
+            times_ = sum(trial(neuron,1:300));
+            dr_ = times_ ./ (300/fsamp) ;
             spikes_ = [spikes_,dr];
             spike = find(trial(neuron,1:end)==1);
             pps = fsamp./diff(spike);
@@ -196,7 +196,7 @@ for neuron = 1 : 98
 
 end
 
-directional_threshold = 0.5;
+directional_threshold = 1;
 % directional_tuning(directional_tuning < directional_threshold) = [];
 
 n_dir_neurons = sum(directional_tuning < directional_threshold);
@@ -206,7 +206,9 @@ firing_rates_valid = firing_rate(directional_tuning > directional_threshold,:);
 
 [r_max,s_a_valid] = max(firing_rates_valid,[],2);
 
-figure; histogram(s_a);
+figure; 
+h = histogram(s_a,'Normalization' ,'probability');
+distribution = h.Values;
 xlabel('Preferred Angle (ith angle)')
 ylabel('Count','Fontsize',14)
 xlabel('Preferred Angle (ith angle)','Fontsize',14);
@@ -319,6 +321,9 @@ for test_angle = 1: 8
             features(within) = abs(features(within));
             
         end
+%         low_count_neurons  = find(distribution < 0.1);
+        [low_count_neurons, ~] = ismember(s_a, find(distribution > 0.1));
+        features(low_count_neurons) = features(low_count_neurons) .* 0.7;
         Weights = repmat(features,1,size(C_neur,1))';
         N = Weights .* C_neur; % weighted individual directions 
         
@@ -326,8 +331,8 @@ for test_angle = 1: 8
     
     if show_plot 
     figure;
-    origin = zeros(1,size(V,2));
-    quiver(origin, origin, V(1,:),V(2,:),'k','Linewidth',1); hold on;
+    origin = zeros(1,size(N,2));
+    quiver(origin, origin, N(1,:),N(2,:),'k','Linewidth',1); hold on;
     quiver(0, 0, pop_vector(1),pop_vector(2),'r','Linewidth',2);
     hold on;
     quiver(0, 0, 20 *unit_vectors(1,test_angle),20*unit_vectors(2,test_angle),'g','Linewidth',2);

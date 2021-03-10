@@ -1,4 +1,4 @@
-function [x, y] = positionEstimator(test_data, modelParameters)
+function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
 
   % **********************************************************
   %
@@ -46,8 +46,12 @@ function [x, y] = positionEstimator(test_data, modelParameters)
   % - [x, y]:
   %     current position of the hand
    
-    LSTM_param = modelParameters.LSTM;
+    %LSTM_param = modelParameters.LSTM;
     decoder = modelParameters.Pop_Vec;
+    
+    if size(test_data.spikes,2) == 320
+        modelParameters.estimated_angle  = 0;
+    end
     
     fsamp = 1000; % sampling Frequency is 1 sample/msec
     
@@ -55,62 +59,77 @@ function [x, y] = positionEstimator(test_data, modelParameters)
     trials = test_data;
     trials.handPos = [trials.startHandPos, trials.decodedHandPos];
     
-    size_t = length(trials); %number of trials
-    t = size(trials.spikes);  %split spikes into 20 sec windows and take average over them
-    spikes = [];
-    for i = 300:20:t(2)-20
-        s = mean(trials.spikes(:,i:i+20), 2); %take mean along the rows
-        spikes = [spikes, s];
-    end
-    
+
     % Getting Firing rates estimate 
     T = size(test_data.spikes,2);
     trial = test_data.spikes;
     
     times = sum(trial,2); % number of spikes
-    all_rates = times ./ (T/fsamp); % firing rates in pulse per second (pps)
+%     all_rates = times ./ (T/fsamp); % firing rates in pulse per second (pps)
     
-    [population_vector, reachingAngle] = estimateReachingAngle(decoder,firing_rates); % estimated reaching angle
-    
-    dataTest = [trials.handPos]; %use neural spikes as feature as well as position
-
-    %Standardise all the features by save values as training set
-    test_mu = LSTM_params.mu;
-    test_sig = LSTM_params.sig;
-
-    dataTest_standardised = (dataTest - test_mu)./ (test_sig +0.0000001); %so it never divides by 0
-
-    XTest = dataTest_standardised;
-    YPred = XTest; %initialise as the same
-
-    net = LSTM_params.net;
-
-    s = size(XTest);
-    numTimeStepsTest = s(2);
-    
-    for i = 2:numTimeStepsTest
-        [net,YPred(:,i)] = predictAndUpdateState(net,XTest(:,i-1),'ExecutionEnvironment','cpu');
+    if size(test_data.spikes,2) <= 500
+        target_id = estimateReachingAngle_Classifier(decoder,times); % estimated reaching angle
+    else
+        target_id = modelParameters.estimated_angle;
     end
     
-    newModelParameters.net = net;
-    newModelParameters.mu = test_mu;
-    newModelParameters.sig = test_sig;
+    
+    T = size(test_data.spikes,2);
+    x0 = test_data.startHandPos(1);
+    y0 = test_data.startHandPos(2);
+    decoding_time = T - 300;
+    x = x0;
+    y = y0;
 
-    % Unnormalise predictions
-    YPred_units = test_sig.*YPred + test_mu;
-
-    % for t = 1:length(YPred) % number of test trials
-    %     y = YPred(t);
-    %     y = test_sig.*y + test_mu;
-    %     YPred_units= [YPred_units; y];    
-    % end
-
-    predict = YPred_units(:,end);
-    x = predict(1);
-    y = predict(2);
+               
+    for t = 1:decoding_time
+        if t > size(modelParameters.Vel(target_id).average,2)
+            % do nothing if end of the signal was reached
+        else
+            x = x + modelParameters.Vel(target_id).average(1,t);
+            y = y + modelParameters.Vel(target_id).average(2,t);
+        end
+    end
+    
+    
+    modelParameters.estimated_angle = target_id;
+    
+   
 end
 
-function [pop_vector,angle] = estimateReachingAngle(decoder,firing_rates)
+function [angle] = estimateReachingAngle_Classifier(decoder,firing_rates)
+% Assumption 1) each neuron only contributes to its preferred orientation of movement 
+        
+
+        angles = [30 70 110 150 190 230 310 350]; % possible angles 
+        theta_radians = deg2rad(angles); % convert angles to radians 
+        
+        tollerance = 1; % parameter regulating the tollerance/sensitivity of decoding 
+                        % of poulation vector 
+        angle_classifier =  decoder.classifier;
+        s_a = decoder.preferred_angle;
+        non_directional = decoder.discard;
+       
+        total_n_spikes = sum(firing_rates);
+        
+         % Convert Firing rates into Features 
+        F_test = []; 
+      
+        for angle = 1: size(angles,2)
+            f(angle) = sum(firing_rates(s_a == angle));
+        end
+
+        % Training 
+        F_test = f./total_n_spikes;
+
+        
+        % Do not use non directional neurons for population vector decoding
+        F_test(non_directional) = [];
+        
+        angle = angle_classifier.predictFcn(F_test);
+     
+end
+function [pop_vector,angle] = estimateReachingAngle_Population(decoder,firing_rates)
 % Assumption 1) each neuron only contributes to its preferred orientation of movement 
         
 
@@ -132,7 +151,8 @@ function [pop_vector,angle] = estimateReachingAngle(decoder,firing_rates)
                                     % to preferred direction 
         
         % Do not use non directional neurons for population vector decoding
-        firing_rate(decoder.non_directional) = [];
+        firing_rates(decoder.non_directional) = [];
+        mean_firing(decoder.non_directional) = [];
         s_a(decoder.non_directional) = [];
         C_neur(:,decoder.non_directional) = [];
         fa_s(decoder.non_directional,:) = [];
@@ -149,6 +169,28 @@ function [pop_vector,angle] = estimateReachingAngle(decoder,firing_rates)
         N = Weights .* C_neur; % weighted individual directions 
         
         pop_vector = sum(N,2); % population vector
-        angle = (pop_vector(2)/pop_vector(1)) * 180/pi;
+        %angle = (pop_vector(2)/pop_vector(1)) * 180/pi;
+        angle = mod(cart2pol(pop_vector(1), pop_vector(2)),2*pi) * 180/pi;
+end
 
+function [target_id] = get_target_id(reachingAngle)
+    if (reachingAngle>=10) & (reachingAngle<50)
+        target_id = 1;
+    elseif (reachingAngle>=50) & (reachingAngle<90)
+        target_id = 2;
+    elseif (reachingAngle>=90) & (reachingAngle<130)
+        target_id = 3;
+    elseif (reachingAngle>=130) & (reachingAngle<170)
+        target_id = 4;
+    elseif (reachingAngle>=170) & (reachingAngle<210)
+        target_id = 5;
+    elseif (reachingAngle>=210) & (reachingAngle<270)
+        target_id = 6;
+    elseif (reachingAngle>=270) & (reachingAngle<330)
+        target_id = 7;
+    elseif (reachingAngle>=330) & (reachingAngle<360)
+        target_id = 8;
+    elseif (reachingAngle<10)
+        target_id = 8;
+    end
 end
