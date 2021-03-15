@@ -57,13 +57,42 @@ trials = training_data;
 size_t = length(trials); %number of trials
 dataTrain = cell(1,size_t*8); %needs to be in cell array for subsequent code
 
+angles = [30*pi/180, 70*pi/180, 110*pi/180, 150*pi/180, 190*pi/180, 230*pi/180, 310*pi/180, 350*pi/180];
+
+%Create features: we want data every 20 sec. Change in position, and sum of
+%all neural spikes in that 20 sec window.
+%We also want int which gives experiment type (angle of reach) (from 1-8).
+T = 20; %sampling interval
 
 count = 1;
 for i = 1:size_t %number of trials
     for j = 1:8     %number of types of directions (experiments)
+        
         N = trials(i,j).handPos(1:2,:); %select only x and y, not z
         S = trials(i,j).spikes;
-        dataTrain{count} = [N;S]; % make one long row vector with features of position and spikes
+        n = size(N);
+        spikes20 = zeros(98,floor(n(2)/T));
+        dpos20 = zeros(2,floor(n(2)/T)); %change in position after 20ms
+        diff = N(:,1);
+        
+        k_count = 1;
+        for k = 1:T:320 -T
+            spikes20(:,k_count) = mean( S(:,k:k+T-1), 2); %sum everything we will get in very first time step
+            dpos20(:,k_count) =  diff;  %N(:,1) - N(:,320);    %in test we won't know change for first 320 ms, so let's train that way
+            diff = [0.0;0.0];
+            k_count= k_count + 1;
+        end
+        
+        initial = N(:,1);
+        for k = 320:T:length(N)-T %iterate through all other timesteps in 20 sec windows
+            spikes20(:,k_count) = mean( S(:,k:k+T-1),2) ; %sum all spikes in 20 sec window
+            dpos20(:,k_count) = initial - N(:,k+T-1);
+            initial = N(:,k+T-1);
+            k_count = k_count + 1;
+        end
+        experiment = ones(1,length(dpos20))*angles(j);        
+        dataTrain{count} = [dpos20;experiment;spikes20]; % make one long row vector with features of position and spikes
+        
         count = count+1;
     end
 end
@@ -73,10 +102,13 @@ dataTrain2 = cell2mat(dataTrain);  %to calculate mean and standard deviation of 
 train_mu = mean(dataTrain2,2);
 train_sig = std(dataTrain2,0,2); %0 weights, dimension 2 (rows)
 
-dataTrain_standardisedX = cell(1,size_t*8);
-dataTrain_standardisedY = cell(1,size_t*8);
+train_mu(3:end,:) = 0; %don't normalise non distance features
+train_sig(3:end,:) = 1;
 
-for i = 1:size_t*8
+dataTrain_standardisedX = cell(1,size_t*8/T);
+dataTrain_standardisedY = cell(1,size_t*8/T);
+
+for i = 1:size_t*8/T
     trial = dataTrain{i};
     trial = (trial - train_mu) ./ train_sig;
     dataTrain_standardisedX{i} = trial(:,1:end-1);
@@ -104,10 +136,10 @@ layers = [ ...
 
 % From https://www.mathworks.com/help/deeplearning/ug/time-series-forecasting-using-deep-learning.html
 options = trainingOptions('adam', ...
-    'MaxEpochs',2, ...
+    'MaxEpochs',300, ...
     'MiniBatchSize',16, ...
     'GradientThreshold',1, ...
-    'InitialLearnRate',0.005, ...
+    'InitialLearnRate',0.001, ...
     'LearnRateSchedule','piecewise', ...
     'LearnRateDropPeriod',125, ...  %after 125 epochs drop learning rate by factor of 0.2
     'LearnRateDropFactor',0.2, ...
