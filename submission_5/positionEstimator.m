@@ -61,7 +61,6 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
         target_id = modelParameters.estimated_angle;
     end
     
-    
     T = size(test_data.spikes,2);
     x = test_data.startHandPos(1);
     y = test_data.startHandPos(2);
@@ -71,7 +70,6 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
     %x = x0;
     %y = y0;
 
-               
     for t = 1:decoding_time
         if t > size(modelParameters.Vel(target_id).average,2)
             % do nothing if end of the signal was reached
