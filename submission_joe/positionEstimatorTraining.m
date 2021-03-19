@@ -2,7 +2,7 @@
 function [modelParameters] = positionEstimatorTraining(training_data)
 
     modelParameters.Pop_Vec = SDA_decoder(training_data);
-    modelParameters.Start_Pos = avg_start_pos(training_data);
+%     modelParameters.Start_Pos = avg_start_pos(training_data);
 
     vel = average_velocities(training_data);
     vel = average_start_pos(vel, training_data);
@@ -23,17 +23,17 @@ function [vel] = average_start_pos(vel, training_data)
 end
 
 
-function [start_pos] = avg_start_pos(training_data)
-    N = size(training_data,1);
-    for i = 1:8
-        grouped_start_pos = [[]];
-        for j = 1:N
-            handPos = training_data(j,i).handPos(1:2,300);
-            grouped_start_pos = cat(3, grouped_start_pos, handPos);
-        end
-        start_pos(i).average = mean(grouped_start_pos,3); 
-    end
-end
+% function [start_pos] = avg_start_pos(training_data)
+%     N = size(training_data,1);
+%     for i = 1:8
+%         grouped_start_pos = [[]];
+%         for j = 1:N
+%             handPos = training_data(j,i).handPos(1:2,300);
+%             grouped_start_pos = cat(3, grouped_start_pos, handPos);
+%         end
+%         start_pos(i).average = mean(grouped_start_pos,3); 
+%     end
+% end
 
 
 function [velocity] = average_velocities(training_data)

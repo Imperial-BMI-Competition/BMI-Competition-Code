@@ -1,18 +1,13 @@
 function [x, y, modelParameters] = positionEstimator(test_data, modelParameters) 
-    
-    if size(test_data.spikes,2) == 320
-        modelParameters.estimated_angle = 0;
-    end
-    
-    % Getting Firing rates estimate 
-    decoder = modelParameters.Pop_Vec;
-    times = sum(test_data.spikes,2); % number of spikes
-    
-     if size(test_data.spikes,2) <= 320
+
+    if size(test_data.spikes,2) <= 320
+        decoder = modelParameters.Pop_Vec;
+        times = sum(test_data.spikes,2); % number of spikes
         target_id = estimateReachingAngle_Classifier(decoder,times); % estimated reaching angle
+        modelParameters.estimated_angle = target_id;
     else
         target_id = modelParameters.estimated_angle;
-     end
+    end
     
 %     target_id = modelParameters.true_dir;
     
@@ -34,6 +29,4 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
     
     x = (x_relative_avg * traj_done) + (x_true_avg * (1  - traj_done));
     y = (y_relative_avg * traj_done) + (y_true_avg * (1 - traj_done));
-    
-    modelParameters.estimated_angle = target_id;
 end
