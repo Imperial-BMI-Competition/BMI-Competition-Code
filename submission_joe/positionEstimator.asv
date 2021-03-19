@@ -9,29 +9,22 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
         modelParameters.init_estimated_angle = target_id;
         modelParameters.estimated_angle = target_id;
     else
-%         if size(test_data.spikes,2) >= 440
-%             if size(test_data.spikes,2) == 440
-%                 decoder = modelParameters.Pop_Vec_Mid;
-%                 firing_rates = sum(test_data.spikes(:,320:440),2); % number of spikes
-%                 total_n_spikes = sum(firing_rates);
-%                 F_test = firing_rates'./total_n_spikes;
-%                 target_id = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
-%                 modelParameters.mid_estimated_angle = target_id;
-%                 modelParameters.estimated_angle = circular_mean([modelParameters.init_estimated_angle, modelParameters.init_estimated_angle, modelParameters.mid_estimated_angle]);
-%                 if modelParameters.estimated_angle ~= modelParameters.init_estimated_angle
-%                    disp("==================")
-%                    disp(["init: ", modelParameters.init_estimated_angle])
-%                    disp(["mid: ", modelParameters.mid_estimated_angle])
-%                    disp(["new: ", modelParameters.estimated_angle])
-%                    disp(["true: ", modelParameters.true_dir])
-%                    disp("")
-%                 end
-%             end
-%         end
+        if size(test_data.spikes,2) >= 440
+            if size(test_data.spikes,2) == 440
+                decoder = modelParameters.Pop_Vec_Mid;
+                firing_rates = sum(test_data.spikes(:,320:440),2); % number of spikes
+                total_n_spikes = sum(firing_rates);
+                F_test = firing_rates'./total_n_spikes;
+                target_id = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
+                modelParameters.mid_estimated_angle = target_id;
+                modelParameters.estimated_angle = circular_mean([modelParameters.init_estimated_angle, modelParameters.init_estimated_angle, modelParameters.mid_estimated_angle]);
+                if 
+            end
+        end
         target_id = modelParameters.estimated_angle;
     end
     
-    target_id = modelParameters.true_dir;
+%     target_id = modelParameters.true_dir;
     
     T = size(test_data.spikes,2);
     decoding_time = T - 300;

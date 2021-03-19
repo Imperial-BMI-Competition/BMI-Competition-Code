@@ -59,6 +59,7 @@ numericPredictors = table2array(varfun(@double, numericPredictors));
 % 'inf' values have to be treated as missing data for PCA.
 numericPredictors(isinf(numericPredictors)) = NaN;
 numComponentsToKeep = min(size(numericPredictors,2), 8);
+warning('off', 'stats:pca:ColRankDefX')
 [pcaCoefficients, pcaScores, ~, ~, explained, pcaCenters] = pca(...
     numericPredictors, ...
     'NumComponents', numComponentsToKeep);

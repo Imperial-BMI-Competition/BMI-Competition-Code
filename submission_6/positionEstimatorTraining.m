@@ -12,7 +12,7 @@ function [modelParameters] = positionEstimatorTraining(training_data)
     vel = average_velocities_cumsum(vel, training_data);
     modelParameters.Vel = vel;
     modelParameters.retrain_sda = false;
-    modelParameters.w = 0.1;
+    modelParameters.w = 0.8;
 end
 
 

@@ -1,9 +1,8 @@
-function [decoder] = SDA_decoder(data)
+function [decoder] = SDA_decoder(data, test_start, test_end)
     % Estiamtes Neurons Tuning curve for population vector decoding
 
     fsamp = 1000;
     angles = [30    70   110   150   190   230     310   350];
-    T_test = 320;% test on predicitng angle given the initial 320 msec only 
 
     %Get the dishcarge rates of all  neurons, angles and tasks
     for row = 1:size(data,1)
@@ -11,7 +10,7 @@ function [decoder] = SDA_decoder(data)
 
             trial = data(row,angle).spikes;
             n_spikes(:,angle,row) = sum(trial(:,1:end),2);
-            n_spikes_test(:,angle,row) = sum(trial(:,1:T_test),2);
+            n_spikes_test(:,angle,row) = sum(trial(:,test_start:test_end),2);
 
         end
     end
@@ -55,8 +54,6 @@ function [decoder] = SDA_decoder(data)
     F_all = [[F, y_true];[F_test(idx,:),y_true_test(idx,:)]];
     [angle_classifier, validationAccuracy] = trainClassifierQDA(F_all);
 
-
-%     fprintf('\nReaching angle decoder (Quadratic Discriminant) Validation Accuracy %2.1f %%',100*validationAccuracy);
     decoder = {};
     
     % Format Output
