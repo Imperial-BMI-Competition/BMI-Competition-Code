@@ -1,18 +1,13 @@
+
 function [modelParameters] = positionEstimatorTraining(training_data)
-    Pop_Vecs = [];
-    tr_s = size(training_data,1);
-    for i = 1:1
-        idxes = randperm(tr_s, int8(tr_s * 1.0));
-        tr_x = training_data(idxes,:);
-        Pop_Vecs = [Pop_Vecs SDA_decoder(tr_x)];
-    end
-    modelParameters.Pop_Vec = Pop_Vecs;
+
+    modelParameters.Pop_Vec = SDA_decoder(training_data);
+    modelParameters.Start_Pos = avg_start_pos(training_data);
+
     vel = average_velocities(training_data);
     vel = average_start_pos(vel, training_data);
     vel = average_velocities_cumsum(vel, training_data);
     modelParameters.Vel = vel;
-    modelParameters.retrain_sda = false;
-    modelParameters.w = 0.1;
 end
 
 
@@ -28,30 +23,45 @@ function [vel] = average_start_pos(vel, training_data)
 end
 
 
-function [vel] = average_velocities(training_data)
+function [start_pos] = avg_start_pos(training_data)
+    N = size(training_data,1);
+    for i = 1:8
+        grouped_start_pos = [[]];
+        for j = 1:N
+            handPos = training_data(j,i).handPos(1:2,300);
+            grouped_start_pos = cat(3, grouped_start_pos, handPos);
+        end
+        start_pos(i).average = mean(grouped_start_pos,3); 
+    end
+end
+
+
+function [velocity] = average_velocities(training_data)
     N = size(training_data,1);
     td = add_vel(training_data);
-    
+    % find average velocities
     for i = 1:8
     Grouped_coord = ([[]]);
     min = 500;
         for j = 1:N
-           start = 300;
-           stop = size(td(j,i).handVel,2);
-           if (stop-start) < min
+            start = 300;
+            stop = size(td(j,i).handVel,2);
+           if (stop-start)<min
               min = stop - start; 
            end
         end
         for j = 1:N
            start = 300;
            stop = start + min;
+
            coord = td(j,i).handVel(:, start:stop);
            Grouped_coord = cat(3, Grouped_coord, coord);
         end
-        vel(i).average = mean(Grouped_coord,3);
+        velocity(i).average = mean(Grouped_coord,3);
     end
+    
+    
 end
-
 
 function [vel] = average_velocities_cumsum(vel, training_data)
     for task = 1:8

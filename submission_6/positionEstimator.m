@@ -1,96 +1,62 @@
 function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
-
-  % **********************************************************
-  %
-  % You can also use the following function header to keep your state
-  % from the last iteration
-  %
-  % function [x, y, newModelParameters] = positionEstimator(test_data, modelParameters)
-  %                 ^^^^^^^^^^^^^^^^^^
-  % Please note that this is optional. You can still use the old function
-  % declaration without returning new model parameters. 
-  %
-  % *********************************************************
-
-  % - test_data:
-  %     test_data(m).trialID
-  %         unique trial ID
-  %     test_data(m).startHandPos
-  %         2x1 vector giving the [x y] position of the hand at the start
-  %         of the trial
-  %     test_data(m).decodedHandPos
-  %         [2xN] vector giving the hand position estimated by your
-  %         algorithm during the previous iterations. In this case, N is 
-  %         the number of times your function has been called previously on
-  %         the same data sequence.
-  %     test_data(m).spikes(i,t) (m = trial id, i = neuron id, t = time)
-  %     in this case, t goes from 1 to the current time in steps of 20
-  %     Example:
-  %         Iteration 1 (t = 320):
-  %             test_data.trialID = 1;
-  %             test_data.startHandPos = [0; 0]
-  %             test_data.decodedHandPos = []
-  %             test_data.spikes = 98x320 matrix of spiking activity
-  %         Iteration 2 (t = 340):
-  %             test_data.trialID = 1;
-  %             test_data.startHandPos = [0; 0]
-  %             test_data.decodedHandPos = [2.3; 1.5]
-  %             test_data.spikes = 98x340 matrix of spiking activity
-  
-  
-  
-  % ... compute position at the given timestep.
-  
-  % Return Value:
-  
-  % - [x, y]:
-  %     current position of the hand
-  
-    
-    if size(test_data.spikes,2) == 320
-        modelParameters.estimated_angle  = 0;
-    end
     
     % Getting Firing rates estimate 
     decoder = modelParameters.Pop_Vec;
     times = sum(test_data.spikes,2); % number of spikes
-    target_id = estimateReachingAngle_Classifier(decoder,times); % estimated reaching angle
     
     if size(test_data.spikes,2) <= 320
-        target_id = estimateReachingAngle_Classifier(decoder,times); % estimated reaching angle
+        target_id = bagged_estimateReachingAngle_Classifier(decoder,times); % estimated reaching angle
+        modelParameters.init_estimated_angle = target_id;
+        modelParameters.estimated_angles = [target_id target_id];
     else
-        if mod(size(test_data.spikes,2), 100) == 0
-            recent_spikes = test_data.spikes(:, end-300:end);
-            recent_times = sum(recent_spikes, 2);
-            times = recent_times;
-            recent_target_id = estimateReachingAngle_Classifier(decoder, times);
-            modelParameters.Wrong = modelParameters.Wrong + abs(recent_target_id - target_id);
-            disp(modelParameters.Wrong);
-            disp("----");
+        if modelParameters.retrain_sda
+            spike_size = size(test_data.spikes, 2);
+            lookback = 400;
+            if mod(spike_size, 50) == 0
+                lookback_start = spike_size - lookback;
+                if lookback_start < 1
+                    lookback_start = 1;
+                end
+                recent_spikes = test_data.spikes(:, lookback_start:end);
+                recent_times = sum(recent_spikes, 2);
+                times = recent_times;
+                recent_target_id = bagged_estimateReachingAngle_Classifier(decoder, times);
+
+                modelParameters.estimated_angles = [modelParameters.estimated_angles, recent_target_id];
+
+
+    %             if modelParameters.init_estimated_angle ~= modelParameters.true_dir
+    %                disp([num2str(size(test_data.spikes,2)), " ", num2str(recent_target_id)]); 
+    %             end
+
+            end
+            target_id = circular_mean(modelParameters.estimated_angles);
+        else
+            target_id = modelParameters.estimated_angles(1);
         end
-        target_id = modelParameters.estimated_angle;
     end
-    
+  
+%     target_id = modelParameters.true_dir;
     
     T = size(test_data.spikes,2);
-    x0 = test_data.startHandPos(1);
-    y0 = test_data.startHandPos(2);
     decoding_time = T - 300;
-    x = x0;
-    y = y0;
-
-               
-    for t = 1:decoding_time
-        if t > size(modelParameters.Vel(target_id).average,2)
-            % do nothing if end of the signal was reached
-        else
-            x = x + modelParameters.Vel(target_id).average(1,t);
-            y = y + modelParameters.Vel(target_id).average(2,t);
-        end
-    end
-    
-    
-    modelParameters.estimated_angle = target_id;
-    
    
+    s = size(modelParameters.Vel(target_id).average, 2);
+    
+    if decoding_time > s
+        decoding_time = s;
+    end
+    x_relative_avg = test_data.startHandPos(1) + modelParameters.Vel(target_id).average_cumsum(1, decoding_time);
+    y_relative_avg = test_data.startHandPos(2) + modelParameters.Vel(target_id).average_cumsum(2, decoding_time);
+
+    x_true_avg = modelParameters.Vel(target_id).avg_start_pos(1) + modelParameters.Vel(target_id).average_cumsum(1, decoding_time);
+    y_true_avg = modelParameters.Vel(target_id).avg_start_pos(2) + modelParameters.Vel(target_id).average_cumsum(2, decoding_time);
+    
+    traj_done = (s - decoding_time) / s;
+    traj_done = traj_done^modelParameters.w;
+    
+    x = (x_relative_avg * traj_done) + (x_true_avg * (1  - traj_done));
+    y = (y_relative_avg * traj_done) + (y_true_avg * (1 - traj_done));
+
 end
+

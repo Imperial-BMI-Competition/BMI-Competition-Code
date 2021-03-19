@@ -4,6 +4,7 @@ function td = add_vel(trial_data)
 % Assumes that the input data includes field named handPos
     td = trial_data;
     [M, N] = size(td);
+    
     % Looping through all trials
     for m = 1:M
         for n = 1:N
@@ -20,3 +21,4 @@ function td = add_vel(trial_data)
         end
     end
 end
+

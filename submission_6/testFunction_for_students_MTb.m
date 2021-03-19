@@ -4,7 +4,11 @@
 % the relevant modelParameters, and then calls the function
 % "positionEstimator" to decode the trajectory. 
 
-function RMSE = testFunction_for_students_MTb(teamName)
+function RMSE = testFunction_for_students_MTb()
+
+clc; close("all"); clear;
+
+tic;
 
 load ../monkeydata0.mat
 
@@ -12,11 +16,10 @@ load ../monkeydata0.mat
 rng(2013);
 ix = randperm(length(trial));
 
-% addpath(teamName);
-
 % Select training and testing data (you can choose to split your data in a different way if you wish)
 trainingData = trial(ix(1:50),:);
 testData = trial(ix(51:end),:);
+
 
 fprintf('Testing the continuous position estimator...')
 
@@ -34,11 +37,13 @@ modelParameters = positionEstimatorTraining(trainingData);
 for tr=1:size(testData,1)
     display(['Decoding block ',num2str(tr),' out of ',num2str(size(testData,1))]);
     pause(0.001)
-    for direc=randperm(8) 
+    for direc=randperm(8)
+        modelParameters.true_dir = direc;
         decodedHandPos = [];
 
         times=320:20:size(testData(tr,direc).spikes,2);
         
+        trial_error = 0;
         for t=times
             past_current_trial.trialId = testData(tr,direc).trialId;
             past_current_trial.spikes = testData(tr,direc).spikes(:,1:t); 
@@ -56,9 +61,12 @@ for tr=1:size(testData,1)
             decodedPos = [decodedPosX; decodedPosY];
             decodedHandPos = [decodedHandPos decodedPos];
             
-            meanSqError = meanSqError + norm(testData(tr,direc).handPos(1:2,t) - decodedPos)^2;
+            current = testData(tr,direc).handPos(1:2,320:20:t);
+            
+            trial_error = trial_error + norm(testData(tr,direc).handPos(1:2,t) - decodedPos)^2;
             
         end
+        meanSqError = meanSqError + trial_error;
         n_predictions = n_predictions+length(times);
         hold on
         plot(decodedHandPos(1,:),decodedHandPos(2,:), 'r');
@@ -68,8 +76,8 @@ end
 
 legend('Decoded Position', 'Actual Position')
 
-RMSE = sqrt(meanSqError/n_predictions) 
+RMSE = sqrt(meanSqError/n_predictions);
 
-rmpath(genpath(teamName))
+toc;
 
 end

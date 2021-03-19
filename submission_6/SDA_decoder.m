@@ -52,7 +52,7 @@ function [decoder] = SDA_decoder(data)
     % Train classifier
     cv = cvpartition(size(F_test,1),'HoldOut',0.5);
     idx = cv.test;
-    F_all = [[F, y_true];[F_test(idx,:),y_true_test(idx,:)]];
+    F_all = [[F, y_true]; [F_test(idx,:), y_true_test(idx,:)]];
     [angle_classifier, validationAccuracy] = trainClassifierQDA(F_all);
 
 
