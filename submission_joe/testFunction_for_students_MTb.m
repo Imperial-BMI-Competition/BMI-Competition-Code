@@ -68,16 +68,12 @@ for tr=1:size(testData,1)
         end
         
 %         if direc ~= modelParameters.estimated_angle
-%             if direc ~= modelParameters.init_estimated_angle
-%                 disp("init")
-%                 disp(modelParameters.init_estimated_angle)
-%                 disp("--------")
-%             end
-%             if direc ~= modelParameters.mid_estimated_angle
-%                 disp("mid")
-%                 disp(modelParameters.mid_estimated_angle)
-%                 disp("________")
-%             end
+%             disp("init")
+%             disp(modelParameters.init_estimated_angles)
+%             disp("--------")
+%             disp("mid")
+%             disp(modelParameters.mid_estimated_angles)
+%             disp("________")
 %             disp("actual")
 %             disp(["pred: ", num2str(modelParameters.estimated_angle)])
 %             disp(["true: ", num2str(direc)])

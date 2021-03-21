@@ -1,4 +1,4 @@
-function [trainedClassifier, validationAccuracy] = trainClassifierQDA(trainingData)
+function [trainedClassifier, validationAccuracy] = trainClassifierQDA(trainingData, validate)
 % [trainedClassifier, validationAccuracy] = trainClassifier(trainingData)
 % returns a trained classifier and its accuracy. This code recreates the
 % classification model trained in Classification Learner app. Use the
@@ -58,22 +58,21 @@ numericPredictors = predictors(:, ~isCategoricalPredictor);
 numericPredictors = table2array(varfun(@double, numericPredictors));
 % 'inf' values have to be treated as missing data for PCA.
 numericPredictors(isinf(numericPredictors)) = NaN;
-numComponentsToKeep = min(size(numericPredictors,2), 8);
+numComponentsToKeep = min(size(numericPredictors,2), 5);
 warning('off', 'stats:pca:ColRankDefX')
-[pcaCoefficients, pcaScores, ~, ~, explained, pcaCenters] = pca(...
-    numericPredictors, ...
-    'NumComponents', numComponentsToKeep);
+[pcaCoefficients, pcaScores, ~, ~, ~, pcaCenters] = pca(numericPredictors, ...
+                                                        'NumComponents', numComponentsToKeep);
+
 predictors = [array2table(pcaScores(:,:)), predictors(:, isCategoricalPredictor)];
 isCategoricalPredictor = [false(1,numComponentsToKeep), true(1,sum(isCategoricalPredictor))];
 
 % Train a classifier
 % This code specifies all the classifier options and trains the classifier.
-classificationDiscriminant = fitcdiscr(...
-    predictors, ...
-    response, ...
-    'DiscrimType', 'quadratic', ...
-    'FillCoeffs', 'off', ...
-    'ClassNames', [1; 2; 3; 4; 5; 6; 7; 8]);
+classificationDiscriminant = fitcdiscr(predictors, ...
+                                       response, ...
+                                       'DiscrimType', 'quadratic', ...
+                                       'FillCoeffs', 'off', ...
+                                       'ClassNames', [1; 2; 3; 4; 5; 6; 7; 8]);
 
 % Create the result struct with predict function
 predictorExtractionFcn = @(x) array2table(x, 'VariableNames', predictorNames);
@@ -99,60 +98,67 @@ predictors = inputTable(:, predictorNames);
 response = inputTable.column_99;
 isCategoricalPredictor = [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false];
 
-% Perform cross-validation
-KFolds = 5;
-cvp = cvpartition(response, 'KFold', KFolds);
-% Initialize the predictions to the proper sizes
-validationPredictions = response;
-numObservations = size(predictors, 1);
-numClasses = 8;
-validationScores = NaN(numObservations, numClasses);
-for fold = 1:KFolds
-    trainingPredictors = predictors(cvp.training(fold), :);
-    trainingResponse = response(cvp.training(fold), :);
-    foldIsCategoricalPredictor = isCategoricalPredictor;
-    
-    % Apply a PCA to the predictor matrix.
-    % Run PCA on numeric predictors only. Categorical predictors are passed through PCA untouched.
-    isCategoricalPredictorBeforePCA = foldIsCategoricalPredictor;
-    numericPredictors = trainingPredictors(:, ~foldIsCategoricalPredictor);
-    numericPredictors = table2array(varfun(@double, numericPredictors));
-    % 'inf' values have to be treated as missing data for PCA.
-    numericPredictors(isinf(numericPredictors)) = NaN;
-    numComponentsToKeep = min(size(numericPredictors,2), 8);
-    [pcaCoefficients, pcaScores, ~, ~, explained, pcaCenters] = pca(...
-        numericPredictors, ...
-        'NumComponents', numComponentsToKeep);
-    trainingPredictors = [array2table(pcaScores(:,:)), trainingPredictors(:, foldIsCategoricalPredictor)];
-    foldIsCategoricalPredictor = [false(1,numComponentsToKeep), true(1,sum(foldIsCategoricalPredictor))];
-    
-    % Train a classifier
-    % This code specifies all the classifier options and trains the classifier.
-    classificationDiscriminant = fitcdiscr(...
-        trainingPredictors, ...
-        trainingResponse, ...
-        'DiscrimType', 'quadratic', ...
-        'FillCoeffs', 'off', ...
-        'ClassNames', [1; 2; 3; 4; 5; 6; 7; 8]);
-    
-    % Create the result struct with predict function
-    pcaTransformationFcn = @(x) [ array2table((table2array(varfun(@double, x(:, ~isCategoricalPredictorBeforePCA))) - pcaCenters) * pcaCoefficients), x(:,isCategoricalPredictorBeforePCA) ];
-    discriminantPredictFcn = @(x) predict(classificationDiscriminant, x);
-    validationPredictFcn = @(x) discriminantPredictFcn(pcaTransformationFcn(x));
-    
-    % Add additional fields to the result struct
-    
-    % Compute validation predictions
-    validationPredictors = predictors(cvp.test(fold), :);
-    [foldPredictions, foldScores] = validationPredictFcn(validationPredictors);
-    
-    % Store predictions in the original order
-    validationPredictions(cvp.test(fold), :) = foldPredictions;
-    validationScores(cvp.test(fold), :) = foldScores;
+validationAccuracy = NaN;
+
+if validate
+
+    % Perform cross-validation
+    KFolds = 5;
+    cvp = cvpartition(response, 'KFold', KFolds);
+    % Initialize the predictions to the proper sizes
+    validationPredictions = response;
+    numObservations = size(predictors, 1);
+    numClasses = 8;
+    validationScores = NaN(numObservations, numClasses);
+    for fold = 1:KFolds
+        trainingPredictors = predictors(cvp.training(fold), :);
+        trainingResponse = response(cvp.training(fold), :);
+        foldIsCategoricalPredictor = isCategoricalPredictor;
+
+        % Apply a PCA to the predictor matrix.
+        % Run PCA on numeric predictors only. Categorical predictors are passed through PCA untouched.
+        isCategoricalPredictorBeforePCA = foldIsCategoricalPredictor;
+        numericPredictors = trainingPredictors(:, ~foldIsCategoricalPredictor);
+        numericPredictors = table2array(varfun(@double, numericPredictors));
+        % 'inf' values have to be treated as missing data for PCA.
+        numericPredictors(isinf(numericPredictors)) = NaN;
+        numComponentsToKeep = min(size(numericPredictors,2), 8);
+        [pcaCoefficients, pcaScores, ~, ~, ~, pcaCenters] = pca(...
+            numericPredictors, ...
+            'NumComponents', numComponentsToKeep);
+        trainingPredictors = [array2table(pcaScores(:,:)), trainingPredictors(:, foldIsCategoricalPredictor)];
+        foldIsCategoricalPredictor = [false(1,numComponentsToKeep), true(1,sum(foldIsCategoricalPredictor))];
+
+        % Train a classifier
+        % This code specifies all the classifier options and trains the classifier.
+        classificationDiscriminant = fitcdiscr(...
+            trainingPredictors, ...
+            trainingResponse, ...
+            'DiscrimType', 'quadratic', ...
+            'FillCoeffs', 'off', ...
+            'ClassNames', [1; 2; 3; 4; 5; 6; 7; 8]);
+
+        % Create the result struct with predict function
+        pcaTransformationFcn = @(x) [ array2table((table2array(varfun(@double, x(:, ~isCategoricalPredictorBeforePCA))) - pcaCenters) * pcaCoefficients), x(:,isCategoricalPredictorBeforePCA) ];
+        discriminantPredictFcn = @(x) predict(classificationDiscriminant, x);
+        validationPredictFcn = @(x) discriminantPredictFcn(pcaTransformationFcn(x));
+
+        % Add additional fields to the result struct
+
+        % Compute validation predictions
+        validationPredictors = predictors(cvp.test(fold), :);
+        [foldPredictions, foldScores] = validationPredictFcn(validationPredictors);
+
+        % Store predictions in the original order
+        validationPredictions(cvp.test(fold), :) = foldPredictions;
+        validationScores(cvp.test(fold), :) = foldScores;
+    end
+
+    % Compute validation accuracy
+    correctPredictions = (validationPredictions == response);
+    isMissing = isnan(response);
+    correctPredictions = correctPredictions(~isMissing);
+    validationAccuracy = sum(correctPredictions)/length(correctPredictions);
 end
 
-% Compute validation accuracy
-correctPredictions = (validationPredictions == response);
-isMissing = isnan(response);
-correctPredictions = correctPredictions(~isMissing);
-validationAccuracy = sum(correctPredictions)/length(correctPredictions);
+end

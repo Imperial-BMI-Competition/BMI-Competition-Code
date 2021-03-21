@@ -1,4 +1,4 @@
-function [angle] = bagged_estimateReachingAngle_Classifier(decoders,F_test)
+function [angles] = bagged_estimateReachingAngle_Classifier(decoders,F_test)
     % Assumption 1) each neuron only contributes to its 
     % preferred orientation of movement 
 
@@ -11,5 +11,4 @@ function [angle] = bagged_estimateReachingAngle_Classifier(decoders,F_test)
         angle = angle_classifier.predictFcn(F_test);
         angles = [angles angle];
     end
-    angle = circular_mean(angles);
 end

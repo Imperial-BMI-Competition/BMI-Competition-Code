@@ -1,23 +1,47 @@
-function [x, y, modelParameters] = positionEstimator(test_data, modelParameters) 
+function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
+    
+    data_length = size(test_data.spikes, 2);
+    if data_length <= 320
+        modelParameters.tree_estimated_angles = [];
+        modelParameters.init_estimated_angles = [];
+        modelParameters.init_estimated_angle = 0;
+        modelParameters.estimated_angle = 0;
+        modelParameters.mid_estimated_angles = [];
+        modelParameters.mid_estimated_angle = 0;
+    end
+    
+    if modelParameters.tree_freq ~= 0
+        if mod(data_length - 320, modelParameters.tree_freq) == 0 
+            tree_data = sum(test_data.spikes(:, data_length-modelParameters.tree_binsize:data_length),2);
+            pred = predict(modelParameters.tree, tree_data');
+            modelParameters.tree_estimated_angles = [modelParameters.tree_estimated_angles, pred];
+        end
+    end
 
-    if size(test_data.spikes,2) <= 320
+    if data_length <= 320
         decoder = modelParameters.Pop_Vec;
-        firing_rates = sum(test_data.spikes(:,1:320),2); % number of spikes
+        firing_rates = sum(test_data.spikes(:,1:modelParameters.init_idx),2); % number of spikes
         total_n_spikes = sum(firing_rates);
         F_test = firing_rates'./total_n_spikes;
-        target_id = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
+        angles = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
+        modelParameters.init_estimated_angles = angles;
+        target_id = circular_mean(angles);
         modelParameters.init_estimated_angle = target_id;
         modelParameters.estimated_angle = target_id;
     else
-%         if size(test_data.spikes,2) >= 440
-%             if size(test_data.spikes,2) == 440
-%                 decoder = modelParameters.Pop_Vec_Mid;
-%                 firing_rates = sum(test_data.spikes(:,320:440),2); % number of spikes
-%                 total_n_spikes = sum(firing_rates);
-%                 F_test = firing_rates'./total_n_spikes;
-%                 target_id = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
-%                 modelParameters.mid_estimated_angle = target_id;
-%                 modelParameters.estimated_angle = circular_mean([modelParameters.init_estimated_angle, modelParameters.init_estimated_angle, modelParameters.mid_estimated_angle]);
+        if data_length >= modelParameters.mid_idx
+            if data_length == modelParameters.mid_idx
+                decoder = modelParameters.Pop_Vec_Mid;
+                firing_rates = sum(test_data.spikes(:,1:modelParameters.mid_idx),2); % number of spikes
+                total_n_spikes = sum(firing_rates);
+                F_test = firing_rates'./total_n_spikes;
+                angles = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
+                target_id = circular_mean(angles);
+                modelParameters.mid_estimated_angles = angles;
+                modelParameters.mid_estimated_angle = target_id;
+                true_angle = modelParameters.true_dir;
+                est_angles = [modelParameters.init_estimated_angles, modelParameters.mid_estimated_angles, modelParameters.tree_estimated_angles];
+                modelParameters.estimated_angle = circular_mean(est_angles);
 %                 if modelParameters.estimated_angle ~= modelParameters.init_estimated_angle
 %                    disp("==================")
 %                    disp(["init: ", modelParameters.init_estimated_angle])
@@ -26,15 +50,14 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
 %                    disp(["true: ", modelParameters.true_dir])
 %                    disp("")
 %                 end
-%             end
-%         end
+            end
+        end
         target_id = modelParameters.estimated_angle;
     end
     
-    target_id = modelParameters.true_dir;
+%     target_id = modelParameters.true_dir;
     
-    T = size(test_data.spikes,2);
-    decoding_time = T - 300;
+    decoding_time = data_length - 300;
 
     s = size(modelParameters.Vel(target_id).average, 2);
     if decoding_time > s
@@ -49,7 +72,7 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
     
     traj_done = (s - decoding_time) / (s-20);
     
-    traj_done = traj_done^0.8;
+    traj_done = traj_done^modelParameters.w;
     
     x = (x_relative_avg * traj_done) + (x_true_avg * (1  - traj_done));
     y = (y_relative_avg * traj_done) + (y_true_avg * (1 - traj_done));
