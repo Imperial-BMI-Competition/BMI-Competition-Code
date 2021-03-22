@@ -61,23 +61,12 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
                 target_id = circular_mean(angles);
                 modelParameters.mid_estimated_angles = angles;
                 modelParameters.mid_estimated_angle = target_id;
-%                 true_angle = modelParameters.true_dir;
                 est_angles = [modelParameters.init_estimated_angles, modelParameters.mid_estimated_angles, modelParameters.tree_estimated_angles];
                 modelParameters.estimated_angle = circular_mean(est_angles);
-%                 if modelParameters.estimated_angle ~= modelParameters.init_estimated_angle
-%                    disp("==================")
-%                    disp(["init: ", modelParameters.init_estimated_angle])
-%                    disp(["mid: ", modelParameters.mid_estimated_angle])
-%                    disp(["new: ", modelParameters.estimated_angle])
-%                    disp(["true: ", modelParameters.true_dir])
-%                    disp("")
-%                 end
             end
         end
         target_id = modelParameters.estimated_angle;
     end
-    
-%     target_id = modelParameters.true_dir;
     
     decoding_time = data_length - 300;
 
