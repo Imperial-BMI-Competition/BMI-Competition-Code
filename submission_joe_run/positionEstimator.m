@@ -23,18 +23,18 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
         
         firing_rates = sum(test_data.spikes(:,1:modelParameters.init_idx),2); % number of spikes
         total_n_spikes = sum(firing_rates);
-        
+        F_test = firing_rates;
         if modelParameters.time_norm
-            F_test = firing_rates'./modelParameters.init_idx;
+            F_test = F_test./modelParameters.init_idx;
         end
         if modelParameters.max_norm
-            F_test = firing_rates'./total_n_spikes;
+            F_test = F_test./total_n_spikes;
         end
         if modelParameters.mean_adjust
-            F_test = F_test - modelParameters.avg_rate;
+            F_test = F_test - modelParameters.avg_rate';
         end
         
-        angles = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
+        angles = bagged_estimateReachingAngle_Classifier(decoder, F_test'); % estimated reaching angle
         modelParameters.init_estimated_angles = angles;
         target_id = circular_mean(angles);
         modelParameters.init_estimated_angle = target_id;
@@ -45,17 +45,18 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
                 decoder = modelParameters.Pop_Vec_Mid;
                 firing_rates = sum(test_data.spikes(:,1:data_length),2); % number of spikes
                 total_n_spikes = sum(firing_rates);                
+                F_test = firing_rates;
                 if modelParameters.time_norm
-                    F_test = firing_rates'./modelParameters.init_idx;
+                    F_test = F_test./modelParameters.init_idx;
                 end
                 if modelParameters.max_norm
-                    F_test = firing_rates'./total_n_spikes;
+                    F_test = F_test./total_n_spikes;
                 end
                 if modelParameters.mean_adjust
-                    F_test = F_test - modelParameters.avg_rate;
+                    F_test = F_test - modelParameters.avg_rate';
                 end
                 
-                angles = bagged_estimateReachingAngle_Classifier(decoder, F_test); % estimated reaching angle
+                angles = bagged_estimateReachingAngle_Classifier(decoder, F_test'); % estimated reaching angle
                 target_id = circular_mean(angles);
                 modelParameters.mid_estimated_angles = angles;
                 modelParameters.mid_estimated_angle = target_id;
