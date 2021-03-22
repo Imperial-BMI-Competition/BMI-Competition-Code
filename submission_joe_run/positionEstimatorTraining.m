@@ -1,25 +1,8 @@
 
-function [modelParameters] = positionEstimatorTraining(training_data)
+function [modelParameters] = positionEstimatorTraining(training_data, modelParameters)
     modelParameters.mid_estimated_angle = 0;
 
-    modelParameters.init_idx = 320;
-    modelParameters.init_bag_size = 1;
-    modelParameters.mid_idx = 360;
-    modelParameters.mid_bag_size = 1;
-    modelParameters.bag_data_split = 0.95;
-    modelParameters.w = 0.8;
-    modelParameters.hold_out = 0.2;
-    modelParameters.validateQD = true;
-    modelParameters.tree_filter_length = 0; % 0, 1, 2
-    modelParameters.tree_sum_length = 0; % 0, 1, 2
-    modelParameters.tree_binsize = 40; % 40, 80, 120
-    modelParameters.tree_freq = 0;
-    modelParameters.start_floor_binsize = floor(300 / modelParameters.tree_binsize);
-    modelParameters.discrimType = 'quadratic'; %['linear' 'quadratic' 'pseudoquadratic']
-    modelParameters.pc_components = 5;
-    modelParameters.time_norm = false;
-    modelParameters.mean_adjust = true;
-    modelParameters.max_norm = true;  
+    
     
     [~, avg_rate] = get_firing_ratio(training_data, 1, modelParameters.init_idx, ...
                                                 modelParameters.hold_out, ...

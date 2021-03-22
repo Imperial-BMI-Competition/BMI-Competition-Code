@@ -9,8 +9,9 @@ function [decoder] = angle_decoder_training(data)
         for angle = 1:size(data,2)
             spikes = [];
             for row = 1:size(data,1)
-                T = size(data(row,angle).spikes,2);
+                
                 trial = data(row,angle).spikes;
+                T = size(T,2);
                 times = sum(trial(neuron,1:T));
                 dr = times ./ (T/fsamp) ;
                 spikes = [spikes,dr];
