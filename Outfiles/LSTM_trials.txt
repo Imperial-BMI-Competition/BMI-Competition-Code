@@ -1,0 +1,10 @@
+RMSE:
+
+0.6963  For 500 hidden units, 5 epochs, batch size 16.  11 minutes training time.
+
+
+106.1782 For 100 hidden units, 300 epochs, batch size 16. 30 sec training time. average neural input in blocks of 20. 
+Loss and RMSE go to less than 1 after 300 epochs.
+
+130.8179 For 100 hidden units, 300 epochs, batch size 16. 30 sec training time. average neural input in blocks of 20. 
+Learning rate changed from 0.005 to 0.001

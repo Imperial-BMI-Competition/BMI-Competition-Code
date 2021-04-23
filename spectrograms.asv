@@ -1,0 +1,37 @@
+% Create spectrograms from spike data
+% Linnea Evanson
+% 22/04/2021
+clc; close all; clear all;
+
+data = load monkeydata_training.mat;
+
+
+for row = 1:100
+    for trial = 1:8
+        
+        spikes = data.trial(row, trial).spikes;
+        posn = data.trial(row, trial).handPos;
+        
+        timestep = 200
+        timechunk = 1;
+        avg_data = mean(spikes(:,1:timestep)); % first 200 timesteps 
+        spectro(row, trial, timestep) = spectrogram(avg_data);
+        
+        prediction(row, trial, timestep) = posn(1:2, timestep+1)  ; %x, y position in next time step
+        
+        stepsize = 20; % take data in 20 se
+        for timestep = 201:20:length(spikes)
+            timechunk = timechunk + 1;
+            
+            avg_data = mean(spikes(:,timestep:timestep+20)); % first 200 timesteps 
+            spectro(row, trial, timestep) = spectrogram(avg_data);
+
+            prediction(row, trial, timestep) = posn(1:2, timestep+1)  ; %x, y position in next time step
+
+        end
+        
+    end
+end
+
+%Could make spectrogram images for each timestep where we get new data, and
+%classify them with coordinates (continuous prediction).
