@@ -15,8 +15,16 @@ path = "spectro_images"; %where spectrograms are saved to
 window = 10;
 overlap = 5;
 nfft = 600;
+fs = 1;  %normalised sampling frequency
 
 iter = 1;
+
+num_row = 100;
+num_trials = 8;
+num_timechunks = 1;
+spectro = cell(num_row, num_trials);
+%prediction = [];
+tic
 for row = 1:100
     for trial = 1:8
         
@@ -42,8 +50,8 @@ for row = 1:100
         
         % We want all output spectrograms to be the same size, so we choose
         % step size to always divide into 30 chunks.
-        num_chunks = 19;
-        stepsize = round(length(spikes)/num_chunks);
+        num_chunks = 1;
+        stepsize = round(200/num_chunks);
         
         % For Nx length signal:
          %cols = fix((NX-NOVERLAP)/(length(WINDOW)-NOVERLAP)) 
@@ -52,39 +60,42 @@ for row = 1:100
         
         %stepsize = 20; % take data in 20 second chunks (as that's what we will get in test)
 
-        for timestep = 1:stepsize:length(spikes) - stepsize -1
+        for timestep = 1 %:stepsize:200 - stepsize -1   %just do first 200 timesteps only
             
-            avg_data = sum(spikes(:,timestep:timestep+stepsize),1); % first 200 timesteps 
+            avg_data = sum(spikes(:,timestep:timestep+stepsize),1); 
             all_avg{row, trial, timechunk} = avg_data;
             if isempty(avg_data)
                 disp("0!!!!!!!")
             end
-            f = figure('visible','off'); %so spectrograms do not display
-            spectrogram(avg_data, window, overlap, nfft);
-            set(gca, 'Visible', 'off');
-            colorbar('off');
-            F = getframe;
-            A = frame2im(F);
+            %f = figure('visible','off'); %so spectrograms do not display
+            [~,~,~, psd] = spectrogram(avg_data, window, overlap, nfft, fs);
+            %set(gca, 'Visible', 'off');
+            %colorbar('off');
+            %F = getframe;
+            %A = frame2im(psd);
 %             filename = string(row) + "_" + string(trial) + "_" + string(timestep) + ".png";
 %             saveas(gcf, fullfile( path, filename));
 %             close(gcf);
             
             %s = spectrogram(avg_data, window, overlap, nfft);
-            sizes{row, trial,timechunk} = max(size(A));
-            spectro{row, trial, timechunk} = imresize(A,[400 400]);      %imread(fullfile( path, filename)); %, [301 4]);
-
+%             sizes{row, trial,timechunk} = max(size(A));
+%             spectro{row, trial, timechunk} = imresize(A,[400 400]);      %imread(fullfile( path, filename)); %, [301 4]);
+            
+            spectro{row, trial, timechunk} = psd;
             prediction(row, trial, timechunk,:) = posn(1:2, timestep+stepsize+1); %x, y position in next time step
            
             timechunk = timechunk + 1;
 
         end
-        
-    end
     iter = iter +1;
-    disp(string(iter*100/(8*100))+"% complete")
+
+    end
+    %disp(string(iter*100/(8*100))+"% complete")
 end
-spectro = spectro(:,:,1:end-1);
-prediction = prediction(:,:,1:end-1,:);
+toc
+disp(toc-tic)
+%spectro = spectro(:,:,1:end-1);
+%prediction = prediction(:,:,1:end-1,:);
 
 %The images are saved into one big spectro matrix, contains the spectrogram
 %of each trial at each chunk of time (200 sec at start, then every 20 seconds after).
@@ -92,11 +103,11 @@ prediction = prediction(:,:,1:end-1,:);
 %% CNN with regression layer
 
 % Inputs to neural net:
-XTrain = cell2mat(spectro(1:50,:,:));
-YTrain = cell2mat(prediction(1:50,:,:,:));
+XTrain = spectro(1:50,:,:); %cell2mat(spectro(1:50,:,:));
+YTrain = mat2cell(prediction(1:50,:,:,:));
 
-XValidation = cell2mat(spectro(51:100,:,:));
-YValidation = cell2mat(prediction(51:100,:,:,:));
+XValidation = spectro(51:100,:,:); %cell2mat(spectro(51:100,:,:));
+YValidation = mat2cell(prediction(51:100,:,:,:)); %cell2mat(prediction(51:100,:,:,:));
 
 % Define network 
 layers = [
