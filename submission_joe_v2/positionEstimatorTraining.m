@@ -40,6 +40,7 @@ function [modelParameters] = positionEstimatorTraining(training_data)
     modelParameters.mean_adjust = true;
     modelParameters.max_norm = true;  
 
+
     [~, avg_rate] = get_firing_ratio(training_data, 1, modelParameters.init_idx, ...
                                                 modelParameters.hold_out, ...
                                                 modelParameters.time_norm, modelParameters.mean_adjust, modelParameters.max_norm);

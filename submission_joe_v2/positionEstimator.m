@@ -67,6 +67,7 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
         end
         target_id = modelParameters.estimated_angle;
     end
+    target_id = modelParameters.true_dir;
     
     decoding_time = data_length - 300;
 
@@ -83,7 +84,7 @@ function [x, y, modelParameters] = positionEstimator(test_data, modelParameters)
     
     traj_done = (s - decoding_time) / (s-20);
     
-    traj_done = traj_done^modelParameters.w;
+    traj_done = min(traj_done^modelParameters.w, 1);
     
     x = (x_relative_avg * traj_done) + (x_true_avg * (1  - traj_done));
     y = (y_relative_avg * traj_done) + (y_true_avg * (1 - traj_done));
