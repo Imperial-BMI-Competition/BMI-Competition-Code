@@ -5,7 +5,7 @@ clc;
 clear all;
 close all;
 
-data = load('monkeydata_training.mat')
+data = load('monkeydata0.mat');
 trials = data.trial;
 trial1 = trials(1,1).handPos;
 trial2 = trials(2,1).handPos;
