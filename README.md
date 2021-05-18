@@ -11,7 +11,7 @@ The folder called 'submission' contain the decoder submitted during the BMI comp
  - submission_6: QDA with avg. trajectory (parameters improvements)
  - submission_7: QDA with avg. trajectory (parameters improvements)
  - submission_8: QDA with avg. trajectory (parameters improvements)
- - submission_best_model: QDA/LDA with Converged (Includes bagging, and ensemble trees)
+ - submission_best_model: QDA/LDA with Converged (Includes randoms search, bagging, and ensemble trees)
  - submission_kalman
 
 Reproducing results:
