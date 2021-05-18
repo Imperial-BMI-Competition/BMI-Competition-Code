@@ -1,16 +1,16 @@
 # BMI-Competition-Code
-
+The folder called 'submission' contain the decoder submitted during the BMI competition. 
  - Kalman_QDA_final
  - LSTM_network
  - Spectrogram_CNN
- - submission_1
- - submission_2
- - submission_3
- - submission_4
- - submission_5
- - submission_6
- - submission_7 
- - submission_8 
+ - submission_1: Population Vector with avg. trajectory
+ - submission_2: Ensemble discriminant analysis  with avg. trajectory
+ - submission_3: Ensemble discriminant analysis  with avg. trajectory
+ - submission_4: QDA with avg. trajectory
+ - submission_5: QDA with avg. trajectory (parameters improvements)
+ - submission_6: QDA with avg. trajectory (parameters improvements)
+ - submission_7: QDA with avg. trajectory (bagging + parameters improvements)
+ - submission_8: QDA with avg. trajectory  with convergence (bagging + parameters improvements)
  - submission_best_model: QDA/LDA with Converged (Includes bagging, and ensemble trees)
  - submission_kalman
 
