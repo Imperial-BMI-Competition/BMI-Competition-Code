@@ -109,7 +109,7 @@ function [modelParameters] = get_params(modelParameters)
         modelParameters.max_norm = true;  
         modelParameters.x_start_path = false;
         modelParameters.use_true = true;
-        
+
     elseif modelParameters.model_name == "QDA w/ Avg. Traj. w/ Convergence w/ Bagging"
         modelParameters.init_idx = 320;
         modelParameters.init_bag_size = 8;
@@ -131,31 +131,8 @@ function [modelParameters] = get_params(modelParameters)
         modelParameters.max_norm = true;
         modelParameters.use_average_traj = false;
         modelParameters.use_true = false;
-        
+
     elseif modelParameters.model_name == "QDA w/ Avg. Traj. w/ Convergence w/ Ensemble Tree"
-        modelParameters.init_idx = 320;
-        modelParameters.init_bag_size = 1;
-        modelParameters.mid_idx = 360;
-        modelParameters.mid_bag_size = 1;
-        modelParameters.bag_data_split = 0.99;
-        modelParameters.w = 0.9;
-        modelParameters.hold_out = 0.8;
-        modelParameters.validateQD = false;
-        modelParameters.tree_filter_length = 2; % 0, 1, 2
-        modelParameters.tree_sum_length = 2; % 0, 1, 2
-        modelParameters.tree_binsize = 40; % 40, 80, 120
-        modelParameters.tree_freq = 320; % 160, 320
-        modelParameters.start_floor_binsize = floor(300 / modelParameters.tree_binsize);
-        modelParameters.discrimType = 'quadratic'; %['linear' 'quadratic' 'pseudoquadratic']
-        modelParameters.pc_components = 10;
-        modelParameters.time_norm = false;
-        modelParameters.mean_adjust = true;
-        modelParameters.max_norm = true;
-        modelParameters.use_average_traj = false;
-        modelParameters.use_true = false;
-        
-        
-    elseif modelParameters.model_name == "QDA w/ Avg. Traj. w/ Convergence w/ Bagging w/ Ensemble Tree"
         modelParameters.init_idx = 320;
         modelParameters.init_bag_size = 8;
         modelParameters.mid_idx = 360;
