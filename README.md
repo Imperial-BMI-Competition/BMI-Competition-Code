@@ -19,3 +19,7 @@ Reproducing results:
 2) Inside the get_params.m file you can see the different model configurations and the string to call that config. Select the string of the model you wish to select and set line 2 in run_with_defined_model.m as:
   - modelParameters.model_name = "your-selected-name";
 3) call the script run_with_defined_model.m
+
+Extra - Reproducing Figures:
+1) Population Vector: popVectorFig.m
+1) QDA: QDA_decoder.m
