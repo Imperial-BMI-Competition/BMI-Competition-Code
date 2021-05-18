@@ -22,4 +22,4 @@ Reproducing results:
 
 Extra - Reproducing Figures:
 1) Population Vector: popVectorFig.m
-1) QDA: QDA_decoder.m
+2) QDA: QDA_decoder.m
