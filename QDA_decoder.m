@@ -25,7 +25,7 @@ searchT = [150 : 10: 320];
     % T_init_predict is the time instants (1:T ) to be included in training
     % data 
     T_init_predict = 300; % comment for  hyperparametr searc
-show_scree = false;
+show_scree = true;
     fsamp = 1000;
     angle = 1;
     neuron = 5;
@@ -40,16 +40,17 @@ show_scree = false;
         for angle = 1:size(data.trial,2)
     %         spikes = [];
     %         spikes_ =  [];
-            times = [];
-            aa = 1;
-            for neuron  = 1: size(data.trial(1,1).spikes,1)
-                T = size(data.trial(row,angle).spikes,2);
-                trial = data.trial(row,angle).spikes(neuron,1:550);
-                overlapping_windows = buffer(trial,L,half); % split into overlapping segments (100msec overlap)
-                n_spikes(neuron,angle,row,:) = sum(overlapping_windows,1)'; % spike counting 
-                aa = aa + 1;
-            end
-
+%             times = [];
+%             aa = 1;
+%             for neuron  = 1: size(data.trial(1,1).spikes,1)
+%                 T = size(data.trial(row,angle).spikes,2);
+%                 trial = data.trial(row,angle).spikes(neuron,1:550);
+%                 overlapping_windows = buffer(trial,L,half); % split into overlapping segments (100msec overlap)
+%                 n_spikes(neuron,angle,row,:) = sum(overlapping_windows,1)'; % spike counting 
+%                 aa = aa + 1;
+%             end
+%      
+                n_spikes(:,angle,row) = sum(data.trial(row,angle).spikes(:,1:end),2);
                 times_ = sum(data.trial(row,angle).spikes(:,1:T_init_predict),2); % spike counting of first T_init_predict msec
                 n_spikes_test(:,angle,row) = times_;
 
@@ -70,16 +71,25 @@ show_scree = false;
 
     for i = 1: 8 % each reaching angle
         for j = 1: 100 % each trial 
-
+            
+            total_n_spikes = sum(n_spikes(:,i,j));
             total_n_spikes_test = sum(n_spikes_test(:,i,j));
-            f = []; f_test =  [];
-            for window = 1:size(n_spikes,4)
-                
-               %training 
-                f(window,:) = n_spikes(:,i,j,window)./sum(n_spikes(:,i,j,window)); % population rate at timebin 'window'
 
-            end
-           
+            f = n_spikes(:,i,j)';
+            % Training 
+            f = f./total_n_spikes;
+            F = [F;f]; 
+            y_true = [y_true; i];
+
+%             total_n_spikes_test = sum(n_spikes_test(:,i,j));
+%             f = []; f_test =  [];
+%             for window = 1:size(n_spikes,4)
+%                 
+%                %training 
+%                 f(window,:) = n_spikes(:,i,j,window)./sum(n_spikes(:,i,j,window)); % population rate at timebin 'window'
+% 
+%             end
+%            
             F = [F;f]; 
             y_true = [y_true; repmat(i,size(n_spikes,4),1)];
 
@@ -184,7 +194,7 @@ numericPredictors = predictors(:, ~isCategoricalPredictor);
 numericPredictors = table2array(varfun(@double, numericPredictors));
 % 'inf' values have to be treated as missing data for PCA.
 numericPredictors(isinf(numericPredictors)) = NaN;
-numComponentsToKeep = min(size(numericPredictors,2), 8);
+numComponentsToKeep = min(size(numericPredictors,2), 10);
 [pcaCoefficients, pcaScores, ~, ~, explained, pcaCenters] = pca(...
     numericPredictors, ...
     'NumComponents', numComponentsToKeep);
