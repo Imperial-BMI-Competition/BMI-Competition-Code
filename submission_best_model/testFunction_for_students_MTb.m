@@ -4,7 +4,7 @@
 % the relevant modelParameters, and then calls the function
 % "positionEstimator" to decode the trajectory. 
 
-function RMSE = testFunction_for_students_MTb(seed)
+function [RMSE, acc, time] = testFunction_for_students_MTb(seed, modelParameters)
 
 % clc; %close("all");
 
@@ -20,9 +20,6 @@ ix = randperm(length(trial));
 trainingData = trial(ix(1:50),:);
 testData = trial(ix(51:end),:);
 
-
-fprintf('Testing the continuous position estimator...')
-
 meanSqError = 0;
 n_predictions = 0;  
 
@@ -32,7 +29,10 @@ n_predictions = 0;
 % grid
 
 % Train Model
-modelParameters = positionEstimatorTraining(trainingData);
+modelParameters = positionEstimatorTraining(trainingData, modelParameters);
+
+attempts = 0;
+correct = 0;
 
 for tr=1:size(testData,1)
 %     display(['Decoding block ',num2str(tr),' out of ',num2str(size(testData,1))]);
@@ -63,34 +63,23 @@ for tr=1:size(testData,1)
             %current = testData(tr,direc).handPos(1:2,320:20:t);
             
             meanSqError = meanSqError + norm(testData(tr,direc).handPos(1:2,t) - decodedPos)^2;
-            
-            
         end
-        
-%         if direc ~= modelParameters.estimated_angle
-%             disp("init")
-%             disp(modelParameters.init_estimated_angles)
-%             disp("--------")
-%             disp("mid")
-%             disp(modelParameters.mid_estimated_angles)
-%             disp("________")
-%             disp("actual")
-%             disp(["pred: ", num2str(modelParameters.estimated_angle)])
-%             disp(["true: ", num2str(direc)])
-%             disp("________")
-%         end
-%         disp("==========")
+        attempts = attempts + 1;
+        if direc == modelParameters.estimated_angle
+            correct = correct + 1;
+        end
         n_predictions = n_predictions+length(times);
-%         hold on
-%         plot(decodedHandPos(1,:),decodedHandPos(2,:), 'r');
-%         plot(testData(tr,direc).handPos(1,times),testData(tr,direc).handPos(2,times),'b')
     end
 end
 
 % legend('Decoded Position', 'Actual Position')
 
 RMSE = sqrt(meanSqError/n_predictions);
-
-toc;
+acc = correct / attempts;
+fprintf('\nRMSE %2.3f \n',RMSE);
+fprintf('Accuracy %2.1f %%\n',100*acc);
+time = toc;
+fprintf('Time %2.4f \n',time);
+fprintf('---------\n');
 
 end

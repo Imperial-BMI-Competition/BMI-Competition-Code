@@ -7,5 +7,3 @@ function [rmses, m_rmse] = testManyFunc(seeds, modelParameters)
     end
     m_rmse = mean(rmses);
 end
-
-

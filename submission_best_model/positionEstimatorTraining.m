@@ -1,44 +1,9 @@
 
-function [modelParameters] = positionEstimatorTraining(training_data)
+function [modelParameters] = positionEstimatorTraining(training_data, modelParameters)
+
     modelParameters.mid_estimated_angle = 0;
-
-    modelParameters.init_idx = 320;
-    modelParameters.init_bag_size = 8;
-    modelParameters.mid_idx = 360;
-    modelParameters.mid_bag_size = 4;
-    modelParameters.bag_data_split = 0.99;
-    modelParameters.w = 0.9;
-    modelParameters.hold_out = 0.8;
-    modelParameters.validateQD = false;
-    modelParameters.tree_filter_length = 0; % 0, 1, 2
-    modelParameters.tree_sum_length = 0; % 0, 1, 2
-    modelParameters.tree_binsize = 0; % 40, 80, 120
-    modelParameters.tree_freq = 0;
-    modelParameters.start_floor_binsize = floor(300 / modelParameters.tree_binsize);
-    modelParameters.discrimType = 'pseudoQuadratic'; %['linear' 'quadratic' 'pseudoquadratic']
-    modelParameters.pc_components = 10;
-    modelParameters.time_norm = false;
-    modelParameters.mean_adjust = true;
-    modelParameters.max_norm = true;  
-
-%     modelParameters.init_idx = 320;
-%     modelParameters.init_bag_size = 4;
-%     modelParameters.mid_idx = 360;
-%     modelParameters.mid_bag_size = 8;
-%     modelParameters.bag_data_split = 0.7;
-%     modelParameters.w = 0.1;
-%     modelParameters.hold_out = 0.5;
-%     modelParameters.validateQD = false;
-%     modelParameters.tree_filter_length = 0; % 0, 1, 2
-%     modelParameters.tree_sum_length = 0; % 0, 1, 2
-%     modelParameters.tree_binsize = 0; % 40, 80, 120
-%     modelParameters.tree_freq = 0;
-%     modelParameters.start_floor_binsize = floor(300 / modelParameters.tree_binsize);
-%     modelParameters.discrimType = 'linear'; %['linear' 'quadratic' 'pseudoquadratic']
-%     modelParameters.pc_components = 40;
-%     modelParameters.time_norm = false;
-%     modelParameters.mean_adjust = true;
-%     modelParameters.max_norm = true;  
+    
+    modelParameters = get_params(modelParameters);
 
     [~, avg_rate] = get_firing_ratio(training_data, 1, modelParameters.init_idx, ...
                                                 modelParameters.hold_out, ...
